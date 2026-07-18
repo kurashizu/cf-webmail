@@ -116,7 +116,7 @@
 			onkeydown={(event) => { if (event.key === 'Enter' || event.key === ' ') fileInput.click(); }}
 			ondragover={(event) => { event.preventDefault(); dragActive = true; }}
 			ondragleave={() => (dragActive = false)}
-			ondrop={(event) => { event.preventDefault(); dragActive = false; chooseFiles(event.dataTransfer.files); }}
+			ondrop={(event) => { event.preventDefault(); dragActive = false; if (event.dataTransfer) chooseFiles(event.dataTransfer.files); }}
 		>
 			<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m9 12 5-5a3 3 0 0 1 4 4l-7 7a5 5 0 0 1-7-7l7-7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
 			<span>Attach files or drag them here</span><small>Up to 25 MB total</small>
@@ -194,7 +194,7 @@
 	.send svg { width: 17px; height: 17px; }
 	.send:disabled { opacity: .55; cursor: wait; }
 	@media (max-width: 760px) {
-		.page { padding: var(--space-3) 10px calc(72px + var(--space-4) + env(safe-area-inset-bottom, 0px)); }
+		.page { padding: var(--space-3) 10px; }
 		.head { gap: var(--space-3); margin-bottom: var(--space-3); }
 		.head h1 { font-size: 21px; }
 		.head p { display: none; }
@@ -207,7 +207,7 @@
 		.message-field textarea { min-height: 240px; font-size: 16px; line-height: 1.55; }
 		.drop-zone, .attachments, .notice { margin-right: var(--space-4); margin-left: var(--space-4); }
 		.drop-zone small { display: none; }
-		.composer-footer { padding: 10px var(--space-4) calc(10px + env(safe-area-inset-bottom, 0px)); position: sticky; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); gap: var(--space-3); }
+		.composer-footer { padding: 10px var(--space-4) calc(10px + env(safe-area-inset-bottom, 0px)); gap: var(--space-3); border-radius: 0 0 var(--radius-md) var(--radius-md); }
 		.composer-footer > span { font-size: 11px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: none; }
 		.send { flex: 1; justify-content: center; min-height: 44px; min-width: 0; white-space: nowrap; padding: 0 14px; }
 		.back { width: 38px; height: 38px; }
