@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
+	import { onMount } from 'svelte';
 	import { formatDate, initials } from '$lib/format';
 	let { data } = $props();
 	let messages = $state<any[]>([]);
@@ -8,8 +9,35 @@
 	let selected = $state<Set<string>>(new Set());
 	let bulkBusy = $state(false);
 	let selectAllInput = $state<HTMLInputElement | null>(null);
+	let storage = $state<{ used_bytes: number; quota_bytes: number; message_count: number; quota_messages: number } | null>(null);
+	let storageDismissed = $state(false);
 	const allSelected = $derived(messages.length > 0 && selected.size === messages.length);
 	const partiallySelected = $derived(selected.size > 0 && selected.size < messages.length);
+
+	const storageLevel = $derived.by(() => {
+		if (!storage) return null;
+		const qBytes = Number(storage.quota_bytes || 0);
+		const qMessages = Number(storage.quota_messages || 0);
+		const bytesRatio = qBytes > 0 ? Number(storage.used_bytes || 0) / qBytes : 0;
+		const messagesRatio = qMessages > 0 ? Number(storage.message_count || 0) / qMessages : 0;
+		const ratio = Math.max(bytesRatio, messagesRatio);
+		if (ratio >= 0.95) return 'critical';
+		if (ratio >= 0.85) return 'high';
+		return null;
+	});
+	async function loadStorageSnapshot() {
+		try {
+			const response = await fetch('/api/storage', { headers: { accept: 'application/json' } });
+			if (response.ok) storage = await response.json();
+		} catch { /* silent */ }
+	}
+	function formatMB(bytes: number) { return `${(bytes / 1024 / 1024).toFixed(1)} MB`; }
+
+	onMount(() => {
+		loadStorageSnapshot();
+		const timer = window.setInterval(loadStorageSnapshot, 60_000);
+		return () => window.clearInterval(timer);
+	});
 
 	$effect(() => {
 		const source = data.messages;
@@ -84,6 +112,23 @@
 	</header>
 
 	{#if actionError}<div class="action-error" role="alert">{actionError}</div>{/if}
+
+		{#if storageLevel && !storageDismissed}
+			<div class="storage-banner" data-level={storageLevel} role="status">
+				<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 9v4m0 4h.01M10.3 3.86c.77-1.36 2.63-1.36 3.4 0l8.45 14.86A2 2 0 0 1 20.4 22H3.6a2 2 0 0 1-1.75-3.28L10.3 3.86Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+				<div>
+					<strong>{storageLevel === 'critical' ? 'Mailbox full — incoming mail will be rejected.' : 'Mailbox nearly full.'}</strong>
+					<span>
+						{#if storage}
+							{formatMB(Number(storage.used_bytes || 0))} of {storage.quota_bytes ? formatMB(storage.quota_bytes) : 'unlimited'} used ·
+							{Number(storage.message_count || 0).toLocaleString()} of {storage.quota_messages ? storage.quota_messages.toLocaleString() : '∞'} messages
+						{/if}
+					</span>
+				</div>
+				<a class="btn btn-ghost" href="/settings#storage">Manage</a>
+				<button type="button" aria-label="Dismiss" onclick={() => (storageDismissed = true)}>×</button>
+			</div>
+		{/if}
 
 		{#if messages.length > 0}<div class="bulk-bar card" class:has-selection={selected.size > 0}><label class="select-all"><input bind:this={selectAllInput} type="checkbox" checked={allSelected} onchange={toggleAll}/><span>{selected.size ? `${selected.size} selected` : 'Select all'}</span></label>{#if selected.size}<div class="bulk-actions"><button disabled={bulkBusy} onclick={() => bulkAction('read')}>Read</button><button disabled={bulkBusy} onclick={() => bulkAction('unread')}>Unread</button><button disabled={bulkBusy} onclick={() => bulkAction('star')}>☆ Star</button><button disabled={bulkBusy} onclick={() => bulkAction('unstar')}>★ Unstar</button><button class="danger" disabled={bulkBusy} onclick={() => bulkAction('move', data.folder === 'Trash' ? 'INBOX' : 'Trash')}>{data.folder === 'Trash' ? 'Move to Inbox' : 'Move to Trash'}</button></div>{/if}</div>{/if}
 
@@ -206,10 +251,19 @@
 		.bulk-actions { overflow-x: auto; padding-left: 7px; }
 		.bulk-actions button { white-space: nowrap; }
 		.bulk-bar { padding: 7px 9px; }
-		.empty-trash { padding: 8px 10px; }
-		.empty-trash svg { display: none; }
-		.list { border-right: 0; border-left: 0; border-radius: 0; }
-		.avatar { display: none; }
-		.row { grid-template-columns: minmax(0, 1fr) auto; padding-left: 10px; }
-	}
-</style>
+				.empty-trash { padding: 8px 10px; }
+				.empty-trash svg { display: none; }
+				.list { border-right: 0; border-left: 0; border-radius: 0; }
+				.avatar { display: none; }
+				.row { grid-template-columns: minmax(0, 1fr) auto; padding-left: 10px; }
+			}
+			.storage-banner { display: flex; align-items: center; gap: 12px; margin-bottom: var(--space-4); padding: 11px 14px; border: 1px solid; border-radius: var(--radius-md); font-size: 12px; }
+			.storage-banner[data-level='high'] { border-color: rgba(245,165,36,.3); background: rgba(245,165,36,.08); color: #f5c97b; }
+			.storage-banner[data-level='critical'] { border-color: rgba(255,80,80,.3); background: rgba(255,80,80,.08); color: #ff9b9b; }
+			.storage-banner svg { width: 18px; height: 18px; flex: none; }
+			.storage-banner strong { display: block; font-size: 12px; font-weight: 600; }
+			.storage-banner span { display: block; margin-top: 2px; font-size: 11px; opacity: .9; }
+			.storage-banner .btn { margin-left: auto; padding: 6px 12px; font-size: 11px; }
+			.storage-banner > button { width: 28px; height: 28px; border: 0; border-radius: 50%; background: transparent; color: inherit; font-size: 18px; opacity: .65; }
+			.storage-banner > button:hover { background: rgba(255,255,255,.06); opacity: 1; }
+		</style>

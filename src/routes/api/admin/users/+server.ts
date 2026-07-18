@@ -9,6 +9,7 @@ import {
 	updateAccountPassword
 } from '$lib/server/db/queries';
 import { hashPassword, newSalt } from '$lib/server/crypto/kdf';
+import { MAX_QUOTA_BYTES, MIN_QUOTA_BYTES, MAX_QUOTA_MESSAGES } from '$lib/server/db/storage';
 
 const PASSWORD_ITERATIONS = 100_000;
 
@@ -43,12 +44,14 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 	const admin = requireAdmin(locals);
 	const env = platform!.env;
 	const body = (await request.json().catch(() => ({}))) as {
-		id?: string;
-		action?: string;
-		display_name?: string;
-		role?: string;
-		password?: string;
-	};
+			id?: string;
+			action?: string;
+			display_name?: string;
+			role?: string;
+			password?: string;
+			quota_bytes?: number;
+			quota_messages?: number;
+		};
 	if (!body.id || !body.action) throw error(400, 'Missing user action');
 	const account: any = await findAccountById(env.DB, body.id);
 	if (!account) throw error(404, 'User not found');
@@ -82,32 +85,56 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 			break;
 		}
 		case 'reset_password': {
-			if (isSelf) throw error(400, 'Change your own password from Settings.');
-			const password = String(body.password || '');
-			if (password.length < 6) throw error(400, 'Password must be at least 6 characters.');
-			if (password.length > 256) throw error(400, 'Password is too long.');
-			const salt = newSalt();
-			const hash = await hashPassword(password, salt, PASSWORD_ITERATIONS);
-			await updateAccountPassword(env.DB, body.id, hash, salt, PASSWORD_ITERATIONS);
-			await env.SESSIONS.delete(`session:${body.id}`);
-			break;
-		}
+					if (isSelf) throw error(400, 'Change your own password from Settings.');
+					const password = String(body.password || '');
+					if (password.length < 6) throw error(400, 'Password must be at least 6 characters.');
+					if (password.length > 256) throw error(400, 'Password is too long.');
+					const salt = newSalt();
+					const hash = await hashPassword(password, salt, PASSWORD_ITERATIONS);
+					await updateAccountPassword(env.DB, body.id, hash, salt, PASSWORD_ITERATIONS);
+					await env.SESSIONS.delete(`session:${body.id}`);
+					break;
+				}
+				case 'set_quota': {
+					// 0 means unlimited for either field. Anything else must fit within caps.
+					const qBytes = Number(body.quota_bytes);
+					const qMessages = Number(body.quota_messages);
+					if (!Number.isFinite(qBytes) || qBytes < 0 || qBytes > MAX_QUOTA_BYTES) {
+						throw error(400, `Storage quota must be between 0 (unlimited) and ${MAX_QUOTA_BYTES} bytes.`);
+					}
+					if (qBytes !== 0 && qBytes < MIN_QUOTA_BYTES) {
+						throw error(400, `Storage quota must be at least ${MIN_QUOTA_BYTES} bytes (or 0 for unlimited).`);
+					}
+					if (!Number.isFinite(qMessages) || qMessages < 0 || qMessages > MAX_QUOTA_MESSAGES) {
+						throw error(400, `Message quota must be between 0 (unlimited) and ${MAX_QUOTA_MESSAGES}.`);
+					}
+					await env.DB
+						.prepare(
+							'UPDATE accounts SET quota_bytes = ?, quota_messages = ?, updated_at = ? WHERE id = ?'
+						)
+						.bind(qBytes, qMessages, Date.now(), body.id)
+						.run();
+					break;
+				}
 		default:
 			throw error(400, 'Invalid user action');
 	}
 
 	const updated: any = await findAccountById(env.DB, body.id);
-	return json({
-		ok: true,
-		user: updated ? {
-			id: updated.id,
-			display_name: updated.display_name,
-			role: updated.role,
-			disabled: (await env.SESSIONS.get(`disabled:${body.id}`)) === '1',
-			has_session: Boolean(await env.SESSIONS.get(`session:${body.id}`))
-		} : null
-	});
-};
+		return json({
+			ok: true,
+			user: updated ? {
+				id: updated.id,
+				display_name: updated.display_name,
+				role: updated.role,
+				quota_bytes: Number(updated.quota_bytes ?? 0),
+				quota_messages: Number(updated.quota_messages ?? 0),
+				storage_used_bytes: Number(updated.storage_used_bytes ?? 0),
+				disabled: (await env.SESSIONS.get(`disabled:${body.id}`)) === '1',
+				has_session: Boolean(await env.SESSIONS.get(`session:${body.id}`))
+			} : null
+		});
+	};
 
 export const DELETE: RequestHandler = async ({ locals, platform, request }) => {
 	const admin = requireAdmin(locals);

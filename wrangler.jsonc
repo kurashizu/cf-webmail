@@ -42,12 +42,15 @@
 	},
 
 	"observability": {
-		"enabled": true
-	},
-	"migrations": [
-		{
-			"tag": "v2",
-			"deleted_classes": ["ImapSessionDO"]
-		}
-	]
-}
+			"enabled": true
+		},
+		"triggers": {
+			"crons": ["0 3 * * *"]
+		},
+		"migrations": [
+			{
+				"tag": "v2",
+				"deleted_classes": ["ImapSessionDO"]
+			}
+		]
+	}

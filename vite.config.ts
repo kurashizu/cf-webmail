@@ -63,21 +63,34 @@ function injectEmailHandler(): Plugin {
 				sources.map(stripExports).join('\n\n');
 
 			const tail = `
-async function __cfWebmailEmail(message, env, ctx) {
-  try {
-    await handleInbound(message, env, ctx);
-  } catch (err) {
-    			console.error('[email handler] failed', {
-    				recipient: message.to || null,
-    				error: err instanceof Error ? err.message : String(err)
-    			});
-    			try { message.setReject('Unable to process message'); } catch (_) {}
-  }
-}
+			async function __cfWebmailEmail(message, env, ctx) {
+			  try {
+			    await handleInbound(message, env, ctx);
+			  } catch (err) {
+			    			console.error('[email handler] failed', {
+			    				recipient: message.to || null,
+			    				error: err instanceof Error ? err.message : String(err)
+			    			});
+			    			try { message.setReject('Unable to process message'); } catch (_) {}
+			  }
+			}
 
-const __cfWebmailDefault = { fetch: __skDefault.fetch, email: __cfWebmailEmail };
-export default __cfWebmailDefault;
-`;
+			async function __cfWebmailScheduled(event, env, ctx) {
+			  try {
+			    const { runMaintenance } = await import('./src/lib/server/cron/maintenance.js');
+			    ctx.waitUntil(runMaintenance(env, ctx));
+			  } catch (err) {
+			    console.error('[cron] dispatch failed', err);
+			  }
+			}
+
+			const __cfWebmailDefault = {
+			  fetch: __skDefault.fetch,
+			  email: __cfWebmailEmail,
+			  scheduled: __cfWebmailScheduled
+			};
+			export default __cfWebmailDefault;
+			`;
 
 			workerSource +=
 				`\n\n// === Injected by cf-webmail:inject-email-handler ===\n` +

@@ -89,10 +89,11 @@ export async function updateAccountPassword(db, accountId, passwordHash, passwor
 export async function listAccounts(db) {
 	const result = await db
 		.prepare(
-			`SELECT a.id, a.local_part, a.email, a.display_name, a.role, a.created_at, a.updated_at,
+			`SELECT a.id, a.local_part, a.email, a.display_name, a.role,
+			        a.created_at, a.updated_at,
+			        a.quota_bytes, a.quota_messages, a.storage_used_bytes,
 			        COUNT(DISTINCT m.id) AS message_count,
 			        COALESCE(SUM(CASE WHEN m.folder = 'INBOX' AND m.flags NOT LIKE '%\\Seen%' THEN 1 ELSE 0 END), 0) AS unread_count,
-			        COALESCE(SUM(m.size), 0) AS storage_bytes,
 			        MAX(m.received_at) AS last_message_at,
 			        COUNT(DISTINCT CASE WHEN m.has_attachments = 1 THEN m.id END) AS messages_with_attachments
 			   FROM accounts a
@@ -131,6 +132,8 @@ export async function deleteAccountData(db, accountId) {
 		db.prepare('UPDATE invite_codes SET consumed_by = NULL WHERE consumed_by = ?').bind(accountId),
 		db.prepare('DELETE FROM accounts WHERE id = ?').bind(accountId)
 	]);
+	// accounts row is gone; storage counter goes with it. Cron reconciliation
+	// (which sums by account_id) will simply skip this account.
 }
 
 // --- folders --------------------------------------------------------------
@@ -437,6 +440,53 @@ export async function emptyTrash(db, accountId) {
 			  WHERE account_id = ? AND name = 'Trash'`
 		).bind(accountId)
 	]);
+	return ids.length;
+}
+
+/**
+ * Delete trash messages older than `cutoff` for every account. Used by the
+ * cron maintenance job. Returns the total number of messages purged.
+ */
+export async function deleteTrashOlderThan(db, cutoff) {
+	const before = await db
+		.prepare(
+			`SELECT account_id, id FROM messages WHERE folder = 'Trash' AND received_at < ?`
+		)
+		.bind(cutoff)
+		.all();
+	const rows = before.results || [];
+	if (!rows.length) return 0;
+
+	// Group by account so per-folder counters can be updated in one batch.
+	const byAccount = new Map();
+	for (const row of rows) {
+		if (!byAccount.has(row.account_id)) byAccount.set(row.account_id, []);
+		byAccount.get(row.account_id).push(row.id);
+	}
+
+	const ids = rows.map((row) => row.id);
+	const placeholders = ids.map(() => '?').join(',');
+	await db.batch([
+		db.prepare(
+			`DELETE FROM attachments WHERE message_id IN (${placeholders})`
+		).bind(...ids),
+		db.prepare(
+			`DELETE FROM messages WHERE id IN (${placeholders})`
+		).bind(...ids)
+	]);
+
+	for (const [accountId] of byAccount) {
+		await db
+			.prepare(
+				`UPDATE folders
+				    SET total_count = (SELECT COUNT(*) FROM messages WHERE account_id = ? AND folder = 'Trash'),
+				        last_message_at = (SELECT MAX(received_at) FROM messages WHERE account_id = ? AND folder = 'Trash')
+				  WHERE account_id = ? AND name = 'Trash'`
+			)
+			.bind(accountId, accountId, accountId)
+			.run();
+		// Counter cache will be reconciled by the caller.
+	}
 	return ids.length;
 }
 

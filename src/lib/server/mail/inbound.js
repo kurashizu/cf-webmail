@@ -3,6 +3,7 @@
 // by the Vite plugin without going through TS compilation.
 
 import { findAccountByLocalPart, ensureFolders, insertMessage, insertAttachment, bumpFolderOnReceive, uuid } from '../db/queries.js';
+import { assertQuota, addStorageUsed, StorageQuotaError } from '../db/storage.js';
 
 async function handleInbound(message, env, ctx) {
 	const recipient = (message.to || '').trim().toLowerCase();
@@ -21,13 +22,30 @@ async function handleInbound(message, env, ctx) {
 	}
 
 	const accountId = account.id;
-	await ensureFolders(env.DB, accountId);
+		await ensureFolders(env.DB, accountId);
 
-	// Read raw stream into a buffer for parsing + size measurement.
-	const rawBuf = await readAll(message.raw);
-	const size = rawBuf.byteLength;
+		// Read raw stream into a buffer for parsing + size measurement.
+		const rawBuf = await readAll(message.raw);
+		const size = rawBuf.byteLength;
 
-	const parsed = await parseEmail(rawBuf);
+		// Quota guard — cheap check on a single indexed row before doing any R2 work.
+		// We pre-parse to know the attachment sizes, but as a fast path: if even the
+		// raw RFC822 size alone would exceed quota, reject immediately.
+		const quotaRow = await env.DB
+			.prepare('SELECT quota_bytes, storage_used_bytes FROM accounts WHERE id = ?')
+			.bind(accountId)
+			.first();
+		const quotaBytes = Number(quotaRow?.quota_bytes ?? 0);
+		if (quotaBytes > 0) {
+			const used = Number(quotaRow?.storage_used_bytes || 0);
+			if (used + size > quotaBytes) {
+				console.warn('[inbound] quota exceeded, rejecting', { recipient, used, quotaBytes, size });
+				message.setReject('Mailbox full');
+				return;
+			}
+		}
+
+		const parsed = await parseEmail(rawBuf);
 
 	const messageId = cleanMessageId(parsed.messageId);
 	const inReplyTo = cleanMessageId(parsed.inReplyTo);
@@ -93,7 +111,23 @@ async function handleInbound(message, env, ctx) {
 		}
 
 		const receivedAt = parseDate(parsed.date) || Date.now();
-		const inserted = await insertMessage(env.DB, {
+				// After parsing we know the true attachment sizes; do a second precise check
+				// before the D1 inserts so the cache stays accurate.
+				const attachmentBytes = attachmentRecords.reduce((s, a) => s + a.data.byteLength, 0);
+				const incomingBytes = size + attachmentBytes;
+				try {
+					await assertQuota(env.DB, accountId, incomingBytes, 1);
+				} catch (err) {
+					if (err instanceof StorageQuotaError) {
+						await deleteStoredObjects(env.MAIL, storedKeys);
+						console.warn('[inbound] precise quota exceeded, rejecting', { recipient, err: err.message });
+						message.setReject('Mailbox full');
+						return;
+					}
+					throw err;
+				}
+
+				const inserted = await insertMessage(env.DB, {
 			id: newId,
 			accountId,
 			folder,
@@ -122,20 +156,23 @@ async function handleInbound(message, env, ctx) {
 		}
 
 		for (const att of attachmentRecords) {
-			await insertAttachment(env.DB, {
-				id: att.id,
-				accountId,
-				messageId: newId,
-				filename: att.filename,
-				mimeType: att.mimeType,
-				size: att.data.byteLength,
-				contentId: att.contentId,
-				r2Key: att.r2Key
-			});
-		}
+					await insertAttachment(env.DB, {
+						id: att.id,
+						accountId,
+						messageId: newId,
+						filename: att.filename,
+						mimeType: att.mimeType,
+						size: att.data.byteLength,
+						contentId: att.contentId,
+						r2Key: att.r2Key
+					});
+				}
 
-		await bumpFolderOnReceive(env.DB, accountId, folder, receivedAt);
-	} catch (error) {
+				// Increment the cached usage counter so admin drawer + self-settings stay in sync.
+				await addStorageUsed(env.DB, accountId, incomingBytes);
+
+				await bumpFolderOnReceive(env.DB, accountId, folder, receivedAt);
+			} catch (error) {
 		await env.DB.prepare('DELETE FROM attachments WHERE account_id = ? AND message_id = ?').bind(accountId, newId).run().catch(() => {});
 		await env.DB.prepare('DELETE FROM messages WHERE account_id = ? AND id = ?').bind(accountId, newId).run().catch(() => {});
 		await deleteStoredObjects(env.MAIL, storedKeys);

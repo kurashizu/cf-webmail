@@ -1,12 +1,35 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { onMount } from 'svelte';
 	let { data, form } = $props();
 	let fileInput: HTMLInputElement;
 	let files = $state<File[]>([]);
 	let sending = $state(false);
 	let dragActive = $state(false);
 
+	let storage = $state<{ used_bytes: number; quota_bytes: number; message_count: number; quota_messages: number } | null>(null);
+
 	const totalSize = $derived(files.reduce((total, file) => total + file.size, 0));
+
+	const projectedUsage = $derived.by(() => {
+		if (!storage) return null;
+		const projectedBytes = Number(storage.used_bytes || 0) + totalSize;
+		const projectedMessages = Number(storage.message_count || 0) + 1;
+		const qBytes = Number(storage.quota_bytes || 0);
+		const qMessages = Number(storage.quota_messages || 0);
+		const overBytes = qBytes > 0 && projectedBytes > qBytes;
+		const overMessages = qMessages > 0 && projectedMessages > qMessages;
+		return { projectedBytes, projectedMessages, overBytes, overMessages };
+	});
+
+	onMount(async () => {
+		try {
+			const response = await fetch('/api/storage', { headers: { accept: 'application/json' } });
+			if (response.ok) storage = await response.json();
+		} catch {
+			/* silent — compose must remain functional even if storage is briefly unavailable */
+		}
+	});
 
 	function chooseFiles(selected: FileList | null) {
 		if (!selected) return;
@@ -36,6 +59,9 @@
 		if (bytes < 1024 * 1024) return `${Math.ceil(bytes / 1024)} KB`;
 		return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 	}
+	function formatMB(bytes: number) {
+		return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+	}
 </script>
 
 <svelte:head><title>Compose · KRSZ Mail</title></svelte:head>
@@ -47,6 +73,20 @@
 		</a>
 		<div><p>Compose</p><h1>New message</h1></div>
 	</header>
+
+	{#if projectedUsage && (projectedUsage.overBytes || projectedUsage.overMessages)}
+		<div class="notice quota-warn" role="alert">
+			<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 9v4m0 4h.01M10.3 3.86c.77-1.36 2.63-1.36 3.4 0l8.45 14.86A2 2 0 0 1 20.4 22H3.6a2 2 0 0 1-1.75-3.28L10.3 3.86Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+			<div>
+				<strong>Your mailbox will exceed its quota.</strong>
+				<span>
+					{#if projectedUsage.overBytes}Storage: {formatMB(projectedUsage.projectedBytes)} of {storage?.quota_bytes ? formatMB(storage.quota_bytes) : '∞'}. {/if}
+					{#if projectedUsage.overMessages}Messages: {projectedUsage.projectedMessages.toLocaleString()} of {storage?.quota_messages ? storage.quota_messages.toLocaleString() : '∞'}.{/if}
+					Send will fail unless you free space first.
+				</span>
+			</div>
+		</div>
+	{/if}
 
 	<form method="POST" action="?/send" enctype="multipart/form-data" class="composer" use:enhance={() => {
 		sending = true;
@@ -142,7 +182,11 @@
 	.attachments button { width: 28px; height: 28px; border-radius: 50%; color: var(--text-muted); font-size: 18px; }
 	.attachments button:hover { background: rgba(255,80,80,.1); color: #ff9696; }
 	.notice { margin: 0 var(--space-5) var(--space-4); padding: 10px 12px; border-radius: var(--radius-md); font-size: 12px; }
-	.notice.error { border: 1px solid rgba(255,80,80,.3); background: rgba(255,80,80,.08); color: #ff9b9b; }
+		.notice.error { border: 1px solid rgba(255,80,80,.3); background: rgba(255,80,80,.08); color: #ff9b9b; }
+		.quota-warn { display: flex; align-items: flex-start; gap: 10px; margin: 0 0 var(--space-4); border: 1px solid rgba(245,165,36,.3); background: rgba(245,165,36,.08); color: #f5c97b; }
+		.quota-warn svg { width: 18px; height: 18px; flex: none; }
+		.quota-warn strong { display: block; font-size: 12px; }
+		.quota-warn span { display: block; margin-top: 3px; font-size: 11px; line-height: 1.5; }
 	.composer-footer { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: var(--space-3) var(--space-5); border-top: 1px solid var(--border); background: var(--bg-card); }
 	.composer-footer > span { color: var(--text-muted); font-size: 10px; }
 	.over-limit { color: #ff8888 !important; }

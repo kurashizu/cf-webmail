@@ -3,6 +3,7 @@
 // _worker.js by the Vite plugin if needed.
 
 import { bumpFolderOnReceive, findAccountByEmail, findAccountById, insertAttachment, insertMessage, uuid } from '../db/queries.js';
+import { assertQuota, addStorageUsed, StorageQuotaError } from '../db/storage.js';
 
 const DEFAULT_DOMAIN = 'krsz.in';
 
@@ -15,6 +16,24 @@ export async function sendOutbound(input, env) {
 
 	const cc = normaliseList(input.cc);
 	const bcc = normaliseList(input.bcc);
+
+	// Pre-check: reject if the sender's own mailbox cannot store the outbound copy
+	// plus all attachment bytes. Done before any R2 writes / Resend calls.
+	const attachments = Array.isArray(input.attachments) ? input.attachments : [];
+	const attachmentSize = attachments.reduce((total, attachment) => total + attachment.content.byteLength, 0);
+	const outgoingApproxBytes = (input.text?.length || 0) + (input.html?.length || 0) + attachmentSize;
+	try {
+		await assertQuota(env.DB, input.accountId, outgoingApproxBytes, 1);
+	} catch (err) {
+		if (err instanceof StorageQuotaError) {
+			return {
+				ok: false,
+				error: `Mailbox ${err.kind} quota exceeded (${err.used}/${err.quota}). Free up space and try again.`,
+				status: 413
+			};
+		}
+		throw err;
+	}
 
 	const domain = env.MAIL_DOMAIN || DEFAULT_DOMAIN;
 	const fromAddress = `${account.local_part}@${domain}`;
@@ -42,8 +61,6 @@ export async function sendOutbound(input, env) {
 	const bccAddrs = bcc.map((a) => ({ addr: a, name: null }));
 	const preview = (input.text || '').replace(/\s+/g, ' ').trim().slice(0, 200);
 
-	const attachments = Array.isArray(input.attachments) ? input.attachments : [];
-	const attachmentSize = attachments.reduce((total, attachment) => total + attachment.content.byteLength, 0);
 	const localRecipients = [];
 	const externalRecipients = [];
 	for (const recipient of to) {
@@ -74,14 +91,17 @@ export async function sendOutbound(input, env) {
 	}
 
 	if (!result.ok) {
-		return {
-			ok: false,
-			error: extractError(result.body) || 'Email service rejected the message',
-			status: result.status
-		};
-	}
+			return {
+				ok: false,
+				error: extractError(result.body) || 'Email service rejected the message',
+				status: result.status
+			};
+		}
 
-	if (env.MAIL) {
+		// Bump sender's cached usage now that the message + attachments are persisted.
+		await addStorageUsed(env.DB, input.accountId, outgoingApproxBytes);
+
+		if (env.MAIL) {
 		await env.MAIL.put(bodyTextKey, input.text || '', {
 			httpMetadata: { contentType: 'text/plain; charset=utf-8' }
 		});
@@ -155,6 +175,30 @@ async function deliverLocal(input, env) {
 	const folder = 'INBOX';
 	const id = uuid();
 	const receivedAt = Date.now();
+
+	// Quota guard for the recipient. If full, silently drop the local copy —
+	// the external Resend delivery has already been (or will be) made, so the
+	// recipient can still pick up the message via their other inbox. We surface
+	// this through a flag so callers can log/alert if they want.
+	const deliveryBytes =
+		(input.text?.length || 0) +
+		(input.html?.length || 0) +
+		input.attachments.reduce((sum, item) => sum + item.content.byteLength, 0);
+	try {
+		await assertQuota(env.DB, input.account.id, deliveryBytes, 1);
+	} catch (err) {
+		if (err instanceof StorageQuotaError) {
+			console.warn('[outbound] local recipient over quota, dropping local copy', {
+				recipient: input.account.email,
+				kind: err.kind,
+				used: err.used,
+				quota: err.quota
+			});
+			return { ok: false, reason: 'quota' };
+		}
+		throw err;
+	}
+
 	const bodyTextKey = bodyKey(input.account.id, folder, id, 'txt');
 	const bodyHtmlKey = bodyKey(input.account.id, folder, id, 'html');
 	if (env.MAIL) {
@@ -162,42 +206,44 @@ async function deliverLocal(input, env) {
 		await env.MAIL.put(bodyHtmlKey, input.html || '', { httpMetadata: { contentType: 'text/html; charset=utf-8' } });
 	}
 	await insertMessage(env.DB, {
-		id,
-		accountId: input.account.id,
-		folder,
-		direction: 'inbound',
-		messageId: input.messageId,
-		threadId: input.messageId,
-		fromAddr: input.fromAddress,
-		fromName: input.fromName,
-		toAddrs: input.to.map((address) => ({ addr: address, name: null })),
-		ccAddrs: input.cc.map((address) => ({ addr: address, name: null })),
-		subject: input.subject,
-		preview: (input.text || '').replace(/\s+/g, ' ').trim().slice(0, 200),
-		bodyHtmlKey,
-		bodyTextKey,
-		hasAttachments: input.attachments.length > 0 ? 1 : 0,
-		flags: [],
-		size: (input.text || '').length + (input.html || '').length + input.attachments.reduce((sum, item) => sum + item.content.byteLength, 0),
-		receivedAt
-	});
+			id,
+			accountId: input.account.id,
+			folder,
+			direction: 'inbound',
+			messageId: input.messageId,
+			threadId: input.messageId,
+			fromAddr: input.fromAddress,
+			fromName: input.fromName,
+			toAddrs: input.to.map((address) => ({ addr: address, name: null })),
+			ccAddrs: input.cc.map((address) => ({ addr: address, name: null })),
+			subject: input.subject,
+			preview: (input.text || '').replace(/\s+/g, ' ').trim().slice(0, 200),
+			bodyHtmlKey,
+			bodyTextKey,
+			hasAttachments: input.attachments.length > 0 ? 1 : 0,
+			flags: [],
+			size: deliveryBytes,
+			receivedAt
+		});
 	for (const attachment of input.attachments) {
 		if (!env.MAIL) break;
 		const attachmentId = uuid();
 		const key = attachmentKey(input.account.id, id, attachmentId, attachment.filename);
 		await env.MAIL.put(key, attachment.content, { httpMetadata: { contentType: attachment.mimeType || 'application/octet-stream' } });
 		await insertAttachment(env.DB, {
-			id: attachmentId,
-			accountId: input.account.id,
-			messageId: id,
-			filename: attachment.filename,
-			mimeType: attachment.mimeType,
-			size: attachment.content.byteLength,
-			r2Key: key
-		});
-	}
-	await bumpFolderOnReceive(env.DB, input.account.id, folder, receivedAt);
-}
+					id: attachmentId,
+					accountId: input.account.id,
+					messageId: id,
+					filename: attachment.filename,
+					mimeType: attachment.mimeType,
+					size: attachment.content.byteLength,
+					r2Key: key
+				});
+			}
+			await addStorageUsed(env.DB, input.account.id, deliveryBytes);
+			await bumpFolderOnReceive(env.DB, input.account.id, folder, receivedAt);
+			return { ok: true };
+		}
 
 function bodyKey(accountId, folder, messageId, kind) {
 	return `bodies/${accountId}/${folder}/${messageId}.${kind === 'html' ? 'html' : 'txt'}`;

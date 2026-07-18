@@ -14,8 +14,33 @@
 	let selected = $state<Set<string>>(new Set());
 	let bulkBusy = $state(false);
 	let selectAllInput = $state<HTMLInputElement | null>(null);
+	let storageDismissed = $state(false);
+	let storage = $state<{ used_bytes: number; quota_bytes: number; message_count: number; quota_messages: number } | null>(null);
 	const allSelected = $derived(messages.length > 0 && selected.size === messages.length);
 	const partiallySelected = $derived(selected.size > 0 && selected.size < messages.length);
+
+	const storageLevel = $derived.by(() => {
+		if (!storage) return null;
+		const qBytes = Number(storage.quota_bytes || 0);
+		const qMessages = Number(storage.quota_messages || 0);
+		const bytesRatio = qBytes > 0 ? Number(storage.used_bytes || 0) / qBytes : 0;
+		const messagesRatio = qMessages > 0 ? Number(storage.message_count || 0) / qMessages : 0;
+		const ratio = Math.max(bytesRatio, messagesRatio);
+		if (ratio >= 0.95) return 'critical';
+		if (ratio >= 0.85) return 'high';
+		return null;
+	});
+
+	async function loadStorageSnapshot() {
+		try {
+			const response = await fetch('/api/storage', { headers: { accept: 'application/json' } });
+			if (response.ok) storage = await response.json();
+		} catch {
+			/* silent */
+		}
+	}
+
+	function formatMB(bytes: number) { return `${(bytes / 1024 / 1024).toFixed(1)} MB`; }
 
 	async function refreshInbox(manual = false) {
 		if (refreshing || document.visibilityState !== 'visible') return;
@@ -32,15 +57,18 @@
 	}
 
 	onMount(() => {
-		lastUpdated = new Date();
-		const timer = window.setInterval(() => refreshInbox(), 10_000);
-		const onVisible = () => { if (document.visibilityState === 'visible') refreshInbox(); };
-		document.addEventListener('visibilitychange', onVisible);
-		return () => {
-			window.clearInterval(timer);
-			document.removeEventListener('visibilitychange', onVisible);
-		};
-	});
+			lastUpdated = new Date();
+			loadStorageSnapshot();
+			const storageTimer = window.setInterval(loadStorageSnapshot, 60_000);
+			const timer = window.setInterval(() => refreshInbox(), 10_000);
+			const onVisible = () => { if (document.visibilityState === 'visible') refreshInbox(); };
+			document.addEventListener('visibilitychange', onVisible);
+			return () => {
+				window.clearInterval(timer);
+				window.clearInterval(storageTimer);
+				document.removeEventListener('visibilitychange', onVisible);
+			};
+		});
 
 	$effect(() => {
 		const source = data.messages;
@@ -175,13 +203,30 @@
 		</div>
 	</header>
 
-	{#if newMessageCount > 0}
-		<button class="new-mail" type="button" onclick={() => (newMessageCount = 0)}>
-			<svg viewBox="0 0 24 24" fill="none"><path d="M4 6h16v12H4V6Zm0 1 8 6 8-6" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
-			{newMessageCount} new {newMessageCount === 1 ? 'message' : 'messages'} received
-			<span>Dismiss</span>
-		</button>
-	{/if}
+	{#if storageLevel && !storageDismissed}
+			<div class="storage-banner" data-level={storageLevel} role="status">
+				<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 9v4m0 4h.01M10.3 3.86c.77-1.36 2.63-1.36 3.4 0l8.45 14.86A2 2 0 0 1 20.4 22H3.6a2 2 0 0 1-1.75-3.28L10.3 3.86Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+				<div>
+					<strong>{storageLevel === 'critical' ? 'Mailbox full — incoming mail will be rejected.' : 'Mailbox nearly full.'}</strong>
+					<span>
+						{#if storage}
+							{formatMB(Number(storage.used_bytes || 0))} of {storage.quota_bytes ? formatMB(storage.quota_bytes) : 'unlimited'} used ·
+							{Number(storage.message_count || 0).toLocaleString()} of {storage.quota_messages ? storage.quota_messages.toLocaleString() : '∞'} messages
+						{/if}
+					</span>
+				</div>
+				<a class="btn btn-ghost" href="/settings#storage">Manage</a>
+				<button type="button" aria-label="Dismiss" onclick={() => (storageDismissed = true)}>×</button>
+			</div>
+		{/if}
+
+		{#if newMessageCount > 0}
+			<button class="new-mail" type="button" onclick={() => (newMessageCount = 0)}>
+				<svg viewBox="0 0 24 24" fill="none"><path d="M4 6h16v12H4V6Zm0 1 8 6 8-6" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+				{newMessageCount} new {newMessageCount === 1 ? 'message' : 'messages'} received
+				<span>Dismiss</span>
+			</button>
+		{/if}
 
 	{#if actionError}
 		<div class="action-error" role="alert">{actionError}</div>
@@ -258,6 +303,15 @@
 	.sync-status > span.syncing { background: var(--accent); animation: pulse 1s ease infinite; }
 	.refresh { width: 32px; height: 32px; display: grid; place-items: center; border-radius: var(--radius-md); color: var(--text-muted); }
 	.refresh:hover:not(:disabled) { background: var(--accent-subtle); color: var(--accent); }
+		.storage-banner { display: flex; align-items: center; gap: 12px; margin-bottom: var(--space-4); padding: 11px 14px; border: 1px solid; border-radius: var(--radius-md); font-size: 12px; }
+		.storage-banner[data-level='high'] { border-color: rgba(245,165,36,.3); background: rgba(245,165,36,.08); color: #f5c97b; }
+		.storage-banner[data-level='critical'] { border-color: rgba(255,80,80,.3); background: rgba(255,80,80,.08); color: #ff9b9b; }
+		.storage-banner svg { width: 18px; height: 18px; flex: none; }
+		.storage-banner strong { display: block; font-size: 12px; font-weight: 600; }
+		.storage-banner span { display: block; margin-top: 2px; font-size: 11px; opacity: .9; }
+		.storage-banner .btn { margin-left: auto; padding: 6px 12px; font-size: 11px; }
+		.storage-banner > button { width: 28px; height: 28px; border: 0; border-radius: 50%; background: transparent; color: inherit; font-size: 18px; opacity: .65; }
+		.storage-banner > button:hover { background: rgba(255,255,255,.06); opacity: 1; }
 	.refresh:disabled { cursor: wait; opacity: .55; }
 	.refresh svg { width: 17px; height: 17px; }
 	.new-mail { width: 100%; display: flex; align-items: center; gap: 9px; margin-bottom: var(--space-4); padding: 10px 13px; border: 1px solid rgba(255,107,53,.25); border-radius: var(--radius-md); background: var(--accent-subtle); color: var(--accent); font-size: 12px; text-align: left; }
