@@ -109,16 +109,16 @@
 			<div class="sidebar-footer">
 				<a href="/settings" class="footer-link">
 					<svg class="nav-icon" viewBox="0 0 24 24" fill="none"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="currentColor" stroke-width="1.7"/><path d="m19.4 15 .1.1 1.1 1.7-2.8 2.8-1.7-1.1-.1-.1a8 8 0 0 1-2 .8V21h-4v-2.4a8 8 0 0 1-2-.8l-.1.1-1.7 1.1-2.8-2.8 1.1-1.7.1-.1a8 8 0 0 1-.8-2H3V8.5h2.4a8 8 0 0 1 .8-2l-.1-.1L5 4.7l2.8-2.8L9.5 3l.1.1a8 8 0 0 1 2-.8V0h4v2.4a8 8 0 0 1 2 .8l.1-.1L19.4 2l2.8 2.8-1.1 1.7-.1.1a8 8 0 0 1 .8 2H24v4h-2.4a8 8 0 0 1-.8 2Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" transform="scale(.82) translate(2.6 2.6)"/></svg>
-					Settings
+					<span>Settings</span>
 				</a>
 				<a href="/api-docs" class="footer-link">
 					<svg class="nav-icon" viewBox="0 0 24 24" fill="none"><path d="m8 7 5-5 5 5M13 2v14M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-					API reference
+					<span>API reference</span>
 				</a>
 				<form method="POST" action="/logout" class="footer-link footer-signout">
 					<button type="submit">
 						<svg class="nav-icon" viewBox="0 0 24 24" fill="none"><path d="M14 4h-7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h7M16 8l4 4-4 4M20 12H10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-						Sign out
+						<span>Sign out</span>
 					</button>
 				</form>
 			</div>
@@ -140,22 +140,6 @@
 				{#if f.unread_count > 0}<span class="bottom-badge">{f.unread_count}</span>{/if}
 			</a>
 		{/each}
-		<a class="bottom-item bottom-compose" href="/compose" aria-label="Compose new message">
-			<span class="bottom-fab" aria-hidden="true">
-				<svg viewBox="0 0 24 24" fill="none"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4L16.5 3.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-			</span>
-			<span>Compose</span>
-		</a>
-		<button
-			type="button"
-			class="bottom-item"
-			aria-expanded={mobileMenuOpen}
-			aria-controls="mobile-sheet"
-			onclick={() => (mobileMenuOpen = !mobileMenuOpen)}
-		>
-			<svg viewBox="0 0 24 24" fill="none"><circle cx="5" cy="12" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="19" cy="12" r="1.4" fill="currentColor"/></svg>
-			<span>More</span>
-		</button>
 	</nav>
 
 	{#if mobileMenuOpen}
@@ -188,17 +172,23 @@
 			<div class="sheet-divider"></div>
 			<nav class="sheet-secondary">
 				<a class="folder" href="/settings" onclick={closeMobileMenu}>
-					<svg class="nav-icon" viewBox="0 0 24 24" fill="none"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="currentColor" stroke-width="1.7"/><path d="m19.4 15 .1.1 1.1 1.7-2.8 2.8-1.7-1.1-.1-.1a8 8 0 0 1-2 .8V21h-4v-2.4a8 8 0 0 1-2-.8l-.1.1-1.7 1.1-2.8-2.8 1.1-1.7.1-.1a8 8 0 0 1-.8-2H3V8.5h2.4a8 8 0 0 1 .8-2l-.1-.1L5 4.7l2.8-2.8L9.5 3l.1.1a8 8 0 0 1 2-.8V0h4v2.4a8 8 0 0 1 2 .8l.1-.1L19.4 2l2.8 2.8-1.1 1.7-.1.1a8 8 0 0 1 .8 2H24v4h-2.4a8 8 0 0 1-.8 2Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" transform="scale(.82) translate(2.6 2.6)"/></svg>
-					Settings
+					<span class="folder-main">
+						<svg class="nav-icon" viewBox="0 0 24 24" fill="none"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="currentColor" stroke-width="1.7"/><path d="m19.4 15 .1.1 1.1 1.7-2.8 2.8-1.7-1.1-.1-.1a8 8 0 0 1-2 .8V21h-4v-2.4a8 8 0 0 1-2-.8l-.1.1-1.7 1.1-2.8-2.8 1.1-1.7.1-.1a8 8 0 0 1-.8-2H3V8.5h2.4a8 8 0 0 1 .8-2l-.1-.1L5 4.7l2.8-2.8L9.5 3l.1.1a8 8 0 0 1 2-.8V0h4v2.4a8 8 0 0 1 2 .8l.1-.1L19.4 2l2.8 2.8-1.1 1.7-.1.1a8 8 0 0 1 .8 2H24v4h-2.4a8 8 0 0 1-.8 2Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" transform="scale(.82) translate(2.6 2.6)"/></svg>
+						<span class="folder-name">Settings</span>
+					</span>
 				</a>
 				<a class="folder" href="/api-docs" onclick={closeMobileMenu}>
-					<svg class="nav-icon" viewBox="0 0 24 24" fill="none"><path d="m8 7 5-5 5 5M13 2v14M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-					API reference
+					<span class="folder-main">
+						<svg class="nav-icon" viewBox="0 0 24 24" fill="none"><path d="m8 7 5-5 5 5M13 2v14M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+						<span class="folder-name">API reference</span>
+					</span>
 				</a>
-				<form method="POST" action="/logout" class="folder folder-button">
-					<button type="submit">
-						<svg class="nav-icon" viewBox="0 0 24 24" fill="none"><path d="M14 4h-7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h7M16 8l4 4-4 4M20 12H10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-						Sign out
+				<form method="POST" action="/logout" class="sheet-logout">
+					<button type="submit" class="folder">
+						<span class="folder-main">
+							<svg class="nav-icon" viewBox="0 0 24 24" fill="none"><path d="M14 4h-7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h7M16 8l4 4-4 4M20 12H10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+							<span class="folder-name">Sign out</span>
+						</span>
 					</button>
 				</form>
 			</nav>
@@ -539,7 +529,7 @@
 
 		.bottom-nav {
 			display: grid;
-			grid-template-columns: repeat(5, minmax(0, 1fr));
+			grid-template-columns: repeat(3, minmax(0, 1fr));
 			gap: 2px;
 			position: fixed;
 			bottom: 0;
@@ -595,35 +585,6 @@
 			font-weight: 700;
 			line-height: 16px;
 			text-align: center;
-		}
-		.bottom-compose {
-			position: relative;
-		}
-		.bottom-fab {
-			position: absolute;
-			top: -22px;
-			left: 50%;
-			transform: translateX(-50%);
-			display: grid;
-			place-items: center;
-			width: 50px;
-			height: 50px;
-			border-radius: 50%;
-			background: var(--accent);
-			color: white;
-			box-shadow: var(--shadow-glow);
-			transition: transform var(--transition-spring), background var(--transition-fast);
-		}
-		.bottom-fab svg {
-			width: 22px;
-			height: 22px;
-		}
-		.bottom-compose:hover .bottom-fab {
-			background: var(--accent-hover);
-			transform: translateX(-50%) translateY(-2px);
-		}
-		.bottom-compose span:last-child {
-			visibility: hidden;
 		}
 
 		/* Sheet */
@@ -717,18 +678,16 @@
 			font-size: 15px;
 		}
 		.sheet .folder .nav-icon { width: 19px; height: 19px; }
-		.folder-button button {
-			display: inline-flex;
-			align-items: center;
-			gap: 10px;
-			font: inherit;
-			color: inherit;
+		.sheet-logout { margin: 0; }
+		.sheet-logout button.folder {
+			width: 100%;
+			padding: 10px 12px;
 			background: transparent;
 			border: 0;
-			padding: 0;
-			cursor: pointer;
-			width: 100%;
+			color: inherit;
+			font: inherit;
 			text-align: left;
+			cursor: pointer;
 		}
 	}
 

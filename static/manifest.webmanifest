@@ -1,0 +1,55 @@
+{
+	"name": "KRSZ Mail",
+	"short_name": "KRSZ Mail",
+	"description": "Invite-only webmail for krsz.in, on the Cloudflare free stack.",
+	"start_url": "/inbox",
+	"scope": "/",
+	"display": "standalone",
+	"orientation": "portrait-primary",
+	"background_color": "#0a0a0f",
+	"theme_color": "#ff6b35",
+	"categories": ["productivity", "communication"],
+	"lang": "en",
+	"icons": [
+		{
+			"src": "/icon-192.png",
+			"sizes": "192x192",
+			"type": "image/png",
+			"purpose": "any"
+		},
+		{
+			"src": "/icon-512.png",
+			"sizes": "512x512",
+			"type": "image/png",
+			"purpose": "any"
+		},
+		{
+			"src": "/icon-512.png",
+			"sizes": "512x512",
+			"type": "image/png",
+			"purpose": "maskable"
+		},
+		{
+			"src": "/icon.png",
+			"sizes": "128x128",
+			"type": "image/png",
+			"purpose": "any"
+		}
+	],
+	"shortcuts": [
+		{
+			"name": "Compose",
+			"short_name": "Compose",
+			"description": "Start a new message",
+			"url": "/compose",
+			"icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+		},
+		{
+			"name": "Settings",
+			"short_name": "Settings",
+			"description": "Manage your account and storage",
+			"url": "/settings",
+			"icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+		}
+	]
+}

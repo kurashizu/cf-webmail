@@ -207,9 +207,9 @@
 		.message-field textarea { min-height: 240px; font-size: 16px; line-height: 1.55; }
 		.drop-zone, .attachments, .notice { margin-right: var(--space-4); margin-left: var(--space-4); }
 		.drop-zone small { display: none; }
-		.composer-footer { padding: 10px var(--space-4) calc(10px + env(safe-area-inset-bottom, 0px)); position: sticky; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
-		.composer-footer > span { font-size: 11px; }
-		.send { flex: 1; justify-content: center; min-height: 44px; }
+		.composer-footer { padding: 10px var(--space-4) calc(10px + env(safe-area-inset-bottom, 0px)); position: sticky; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); gap: var(--space-3); }
+		.composer-footer > span { font-size: 11px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: none; }
+		.send { flex: 1; justify-content: center; min-height: 44px; min-width: 0; white-space: nowrap; padding: 0 14px; }
 		.back { width: 38px; height: 38px; }
 	}
 </style>
