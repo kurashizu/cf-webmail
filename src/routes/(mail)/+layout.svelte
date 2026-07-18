@@ -196,6 +196,8 @@
 		display: grid;
 		grid-template-columns: var(--sidebar-width) 1fr;
 		min-height: 0;
+		height: calc(100dvh - var(--header-height));
+		overflow: hidden;
 	}
 
 	.sidebar {
@@ -205,6 +207,9 @@
 		display: flex;
 		flex-direction: column;
 		justify-content: space-between;
+		min-height: 0;
+		overflow-y: auto;
+		overscroll-behavior: contain;
 	}
 
 	nav {
@@ -301,6 +306,8 @@
 			.layout {
 				display: flex;
 				flex-direction: column;
+				height: auto;
+				overflow: visible;
 			}
 
 			.sidebar {
@@ -312,7 +319,9 @@
 				border-right: 0;
 				border-bottom: 1px solid var(--border);
 				overflow-x: auto;
+				overflow-y: hidden;
 				scrollbar-width: none;
+				max-height: none;
 			}
 
 			.sidebar::-webkit-scrollbar { display: none; }
