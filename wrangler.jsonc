@@ -1,0 +1,53 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "cf-webmail",
+	"main": ".svelte-kit/cloudflare/_worker.js",
+	"compatibility_date": "2025-01-15",
+	"compatibility_flags": ["nodejs_compat"],
+	"assets": {
+		"directory": ".svelte-kit/cloudflare",
+		"binding": "ASSETS"
+	},
+
+	// Incoming mail uses Cloudflare Email Routing. Outgoing mail uses Resend.
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "cf-webmail-db",
+			"database_id": "357038c4-8c0d-4dc3-9a29-97c2c9ad1f4f",
+			"migrations_dir": "migrations"
+		}
+	],
+	"kv_namespaces": [
+		{
+			"binding": "SESSIONS",
+			"id": "757683a8bedf4c53bd20854f6e0f27bb"
+		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "MAIL",
+			"bucket_name": "cf-webmail-mail"
+		}
+	],
+
+	"vars": {
+		"APP_NAME": "KRSZ Mail",
+		"MAIL_DOMAIN": "krsz.in",
+		"ACCOUNT_ID": "f1494473540307a5935f4a6a56c0d015",
+		"MAIL_ZONE_ID": "409d8fcbeeaaf3ee7b4be2f8f626b440",
+		"WORKER_NAME": "cf-webmail",
+		"DEFAULT_PAGE_SIZE": "50",
+		"MAX_ATTACHMENT_SIZE": "26214400"
+	},
+
+	"observability": {
+		"enabled": true
+	},
+	"migrations": [
+		{
+			"tag": "v2",
+			"deleted_classes": ["ImapSessionDO"]
+		}
+	]
+}
