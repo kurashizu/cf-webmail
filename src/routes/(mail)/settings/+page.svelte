@@ -252,14 +252,14 @@
 		.link-btn { background: none; border: 0; padding: 0; color: inherit; text-decoration: underline; cursor: pointer; font: inherit; }
 
 		@media (max-width: 800px) {
-			.page { padding: var(--space-4); }
+			.page { padding: var(--space-4) var(--space-4) calc(72px + var(--space-4) + env(safe-area-inset-bottom, 0px)); }
 			.settings-grid { grid-template-columns: 1fr; }
 			.overview { position: static; display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: var(--space-3); }
 			.account-mark { margin: 0; }
 			.account-details { grid-column: 1 / -1; grid-template-columns: repeat(3, 1fr); }
 		}
 		@media (max-width: 560px) {
-			.page { padding: 14px 10px; }
+			.page { padding: var(--space-3) 10px calc(72px + var(--space-3) + env(safe-area-inset-bottom, 0px)); }
 			.setting-card, .overview { padding: var(--space-4); }
 			.password-grid { grid-template-columns: 1fr; }
 			.password-grid .full { grid-column: auto; }

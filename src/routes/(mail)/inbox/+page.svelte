@@ -194,7 +194,7 @@
 		</div>
 		<div class="head-actions">
 			<div class="sync-status" title={lastUpdated ? `Last updated ${lastUpdated.toLocaleTimeString()}` : 'Checking for mail'}>
-				<span class:syncing={refreshing}></span>{refreshing ? 'Checking…' : 'Live'}
+				<span class="dot" class:syncing={refreshing}></span>{refreshing ? 'Checking…' : 'Live'}
 			</div>
 			<button class="refresh" type="button" onclick={() => refreshInbox(true)} disabled={refreshing} aria-label="Refresh Inbox" title="Refresh Inbox">
 				<svg viewBox="0 0 24 24" fill="none"><path d="M20 7v5h-5M4 17v-5h5M18.4 10a7 7 0 0 0-12-3L4 9m16 6-2.4 2a7 7 0 0 1-12-3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -395,25 +395,42 @@
 	.icon-button.danger:hover:not(:disabled) { color: #ff8888; }
 
 	@media (max-width: 720px) {
-		.page { padding: var(--space-4); }
-		.page-head { margin-bottom: var(--space-4); }
-		.message-link { grid-template-columns: 34px minmax(0, 1fr) auto; padding: 12px 6px 12px 4px; gap: 10px; }
-		.avatar { width: 34px; height: 34px; }
-		.row-actions { padding-right: 6px; opacity: 1; }
-		.icon-button { width: 30px; }
+		.page { padding: var(--space-4) var(--space-3); }
+		.page-head { margin-bottom: var(--space-3); align-items: center; }
+		.page-head h1 { font-size: 24px; }
+		.head-actions { gap: 6px; }
+		.sync-status span:not(.dot) { display: none; }
+		.sync-status > span.dot { display: inline-block; }
+		.count { display: none; }
+		.storage-banner { padding: 10px 12px; font-size: 11px; gap: 10px; }
+		.storage-banner .btn { padding: 5px 10px; font-size: 10px; }
+		.storage-banner > button { width: 26px; height: 26px; }
+		.bulk-bar { padding: 6px 8px; gap: 8px; }
+		.bulk-actions { padding-left: 8px; gap: 1px; }
+		.bulk-actions button { padding: 6px 7px; min-height: 34px; }
+		.bulk-actions button span { display: none; }
+		.bulk-actions svg { width: 17px; height: 17px; }
+		.list { border-right: 0; border-left: 0; border-radius: 0; }
+		.msg { grid-template-columns: 36px minmax(0, 1fr) auto; }
+		.row-select { padding-left: 6px; }
+		.message-link { grid-template-columns: 38px minmax(0, 1fr) auto; padding: 12px 8px 12px 6px; gap: 10px; min-height: 60px; }
+		.avatar { width: 36px; height: 36px; font-size: 11px; }
+		.row-actions { padding-right: 6px; opacity: 1; gap: 1px; }
+		.icon-button { width: 36px; height: 36px; }
 		.icon-button.danger { display: none; }
-		.preview { max-width: 100%; }
+		.from { font-size: 13px; }
+		.subject { font-size: 13px; }
+		.preview { font-size: 11px; }
+		.empty { min-height: 280px; padding: var(--space-6); }
 	}
 
-	@media (max-width: 480px) {
-		.page { padding: 14px 10px; }
-		.bulk-actions span { display: none; }
-		.bulk-actions { gap: 0; padding-left: 7px; }
+	@media (max-width: 420px) {
+		.page { padding: var(--space-3) 10px; }
+		.bulk-bar { padding: 5px 6px; }
+		.bulk-actions { padding-left: 6px; }
 		.bulk-actions button { padding: 6px; }
-		.bulk-bar { padding: 7px 9px; }
-		.list { border-right: 0; border-left: 0; border-radius: 0; }
-		.avatar { display: none; }
-		.message-link { grid-template-columns: minmax(0, 1fr) auto; padding-left: 10px; }
-		.row-actions .icon-button:not(.star) { display: none; }
+		.message-link { padding: 11px 4px 11px 4px; gap: 8px; }
+		.from { font-size: 12.5px; }
+		.subject { font-size: 12.5px; }
 	}
 </style>

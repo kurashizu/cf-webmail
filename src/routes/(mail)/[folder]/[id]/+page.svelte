@@ -220,17 +220,22 @@
 	.skeleton span { height: 11px; border-radius: var(--radius-full); background: linear-gradient(90deg, var(--bg-card), var(--bg-elevated), var(--bg-card)); background-size: 200% 100%; animation: shimmer 1.4s infinite; }
 	.skeleton span:nth-child(1) { width: 85%; }.skeleton span:nth-child(2) { width: 72%; }.skeleton span:nth-child(3) { width: 92%; }.skeleton span:nth-child(4) { width: 54%; }
 	@keyframes shimmer { to { background-position: -200% 0; } }
-	@media (max-width: 680px) {
-		.page { padding: 12px 10px var(--space-8); }
-		.toolbar { align-items: flex-start; }
-		.tool span { display: none; }
-		.tool { width: 34px; justify-content: center; padding: 0; }
+	@media (max-width: 760px) {
+		.page { padding: 10px 10px calc(72px + var(--space-8) + env(safe-area-inset-bottom, 0px)); }
+		.toolbar { gap: 6px; flex-wrap: nowrap; align-items: center; }
+		.tool:not(.primary) span { display: none; }
+		.tool:not(.primary) { width: 38px; justify-content: center; padding: 0; }
+		.tool { min-height: 38px; }
+		.tool.primary { padding: 0 11px; font-size: 12px; }
+		.back { min-height: 38px; padding: 0 4px; }
 		.back span { display: none; }
+		.back svg { width: 20px; height: 20px; }
 		.message-head, .body { padding: var(--space-4); }
 		.attachments { padding: var(--space-3) var(--space-4); }
 		.sender-row { grid-template-columns: 36px minmax(0, 1fr); }
 		.avatar { width: 36px; height: 36px; }
 		time { grid-column: 2; margin-top: -8px; }
 		.cc { margin-left: 48px; }
+		.attachment-grid { grid-template-columns: 1fr; }
 	}
 </style>

@@ -193,12 +193,23 @@
 	.send { padding: 10px 17px; }
 	.send svg { width: 17px; height: 17px; }
 	.send:disabled { opacity: .55; cursor: wait; }
-	@media (max-width: 600px) {
-		.page { padding: 14px 10px; }
-		.address-fields, .message-field { padding-right: var(--space-4); padding-left: var(--space-4); }
+	@media (max-width: 760px) {
+		.page { padding: var(--space-3) 10px calc(72px + var(--space-4) + env(safe-area-inset-bottom, 0px)); }
+		.head { gap: var(--space-3); margin-bottom: var(--space-3); }
+		.head h1 { font-size: 21px; }
+		.head p { display: none; }
+		.composer { border-radius: var(--radius-md); }
+		.address-fields { padding: 5px var(--space-4) 0; }
+		.field.inline { grid-template-columns: 1fr; gap: 2px; padding: 10px 0; }
+		.field.inline span { font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
+		.field.inline input { padding: 0; min-height: 28px; }
+		.message-field { padding: var(--space-3) var(--space-4); }
+		.message-field textarea { min-height: 240px; font-size: 16px; line-height: 1.55; }
 		.drop-zone, .attachments, .notice { margin-right: var(--space-4); margin-left: var(--space-4); }
 		.drop-zone small { display: none; }
-		.composer-footer { padding: 10px var(--space-4); }
-		.send { flex: 1; justify-content: center; }
+		.composer-footer { padding: 10px var(--space-4) calc(10px + env(safe-area-inset-bottom, 0px)); position: sticky; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
+		.composer-footer > span { font-size: 11px; }
+		.send { flex: 1; justify-content: center; min-height: 44px; }
+		.back { width: 38px; height: 38px; }
 	}
 </style>
