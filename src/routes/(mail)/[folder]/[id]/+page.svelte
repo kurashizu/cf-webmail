@@ -25,7 +25,7 @@
 			if (data.message.hasHtml) {
 				const response = await fetch(`/api/messages/${data.message.id}/body?kind=html`);
 				if (response.ok) {
-					const result = await response.json();
+					const result = (await response.json()) as { body?: string };
 					bodyHtml = result.body || '';
 					if (bodyHtml) return;
 				}
@@ -33,7 +33,7 @@
 			if (data.message.hasText) {
 				const response = await fetch(`/api/messages/${data.message.id}/body?kind=text`);
 				if (response.ok) {
-					const result = await response.json();
+					const result = (await response.json()) as { body?: string };
 					bodyText = result.body || '';
 				}
 			}
@@ -61,7 +61,7 @@
 		try {
 			const response = await fetch(`/api/messages/${data.message.id}/star`, { method: 'POST' });
 			if (!response.ok) throw new Error();
-			const result = await response.json();
+			const result = (await response.json()) as { flags: string[] };
 			starred = result.flags.includes('\\Flagged');
 			await invalidateAll();
 		} catch {

@@ -37,12 +37,12 @@
 		invites: invites.filter((i) => !i.consumed_at && (!i.expires_at || i.expires_at >= Date.now())).length
 	});
 
-	async function requestJson(url: string, options: RequestInit = {}) {
+	async function requestJson(url: string, options: RequestInit = {}): Promise<any> {
 		const controller = new AbortController();
 		const timeout = setTimeout(() => controller.abort(), 15_000);
 		try {
 			const response = await fetch(url, { ...options, signal: options.signal || controller.signal });
-			const result = await response.json().catch(() => ({}));
+			const result: any = await response.json().catch(() => ({}));
 			if (!response.ok) throw new Error(result.message || result.error?.message || 'Action failed.');
 			return result;
 		} catch (error) {

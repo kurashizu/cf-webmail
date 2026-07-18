@@ -44,13 +44,13 @@ function injectEmailHandler(): Plugin {
 							readFileSync('src/lib/server/db/queries.js', 'utf-8')
 						];
 
-			const stripImports = (s) =>
+			const stripImports = (s: string) =>
 				s
 					.replace(/^import\s+[^;]+from\s+['"]\.\.?\/[^'"]+['"];?\s*$/gm, '')
 					.replace(/^import\s+\{[^}]+\}\s+from\s+['"]\.\.?\/[^'"]+['"];?\s*$/gm, '')
 					.replace(/^import\s+[^;]+from\s+['"]postal-mime['"];?\s*$/gm, '');
 
-			const stripExports = (s) =>
+			const stripExports = (s: string) =>
 				stripImports(s)
 					.replace(/^export\s+(async\s+)?function\s+/gm, '$1function ')
 					.replace(/^export\s+const\s+/gm, 'const ')

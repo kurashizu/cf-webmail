@@ -51,7 +51,7 @@
 	function updateFlags(flags: string[], action: string) { const flag = action === 'read' || action === 'unread' ? '\\Seen' : '\\Flagged'; const on = action === 'read' || action === 'star'; return on ? (flags.includes(flag) ? flags : [...flags, flag]) : flags.filter((item) => item !== flag); }
 	async function bulkAction(action: string, folder?: string) {
 		if (!selected.size || bulkBusy) return; bulkBusy = true; actionError = '';
-		try { const response = await fetch('/api/messages/bulk', { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({ids:[...selected], action, folder}) }); if (!response.ok) throw new Error((await response.json().catch(()=>({}))).message || 'Bulk action failed.');
+		try { const response = await fetch('/api/messages/bulk', { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({ids:[...selected], action, folder}) }); if (!response.ok) throw new Error(((await response.json().catch(()=>({}))) as { message?: string }).message || 'Bulk action failed.');
 			if (action === 'move' || (data.folder === 'Starred' && action === 'unstar')) messages = messages.filter((message) => !selected.has(message.id)); else messages = messages.map((message) => selected.has(message.id) ? {...message, flags:updateFlags(message.flags, action)} : message); selected = new Set(); await invalidateAll();
 		} catch(error) { actionError = error instanceof Error ? error.message : 'Bulk action failed.'; } finally { bulkBusy = false; }
 	}

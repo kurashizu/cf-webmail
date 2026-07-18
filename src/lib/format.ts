@@ -1,17 +1,17 @@
 // Parse the +page load's "to_addrs" / "cc_addrs" JSON into a friendly list.
 import type { Address } from './types';
 
-export function decodeAddresses(s) {
+export function decodeAddresses(s: string | null | undefined): Address[] {
 	if (!s) return [];
 	try {
 		const arr = JSON.parse(s);
-		return arr;
+		return Array.isArray(arr) ? arr : [];
 	} catch {
 		return [];
 	}
 }
 
-export function formatAddresses(arr) {
+export function formatAddresses(arr: Address[] | null | undefined): string {
 	if (!Array.isArray(arr) || !arr.length) return '';
 	return arr
 		.map((a) => (a?.name ? `${a.name} <${a.addr}>` : a?.addr || ''))
@@ -19,7 +19,7 @@ export function formatAddresses(arr) {
 		.join(', ');
 }
 
-export function formatDate(ts) {
+export function formatDate(ts: number | string | Date | null | undefined): string {
 	if (!ts) return '';
 	const d = new Date(ts);
 	const now = new Date();
@@ -33,9 +33,11 @@ export function formatDate(ts) {
 	return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
-export function initials(name) {
+export function initials(name: string | null | undefined): string {
 	if (!name) return '?';
-	const parts = name.trim().split(/\s+/);
+	const trimmed = name.trim();
+	if (!trimmed) return '?';
+	const parts = trimmed.split(/\s+/);
 	if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
 	return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }

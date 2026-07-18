@@ -26,7 +26,7 @@ const LOCAL_PART_RE = /^[a-z0-9][a-z0-9._-]{1,30}$/;
 export const actions: Actions = {
 	default: async ({ request, platform, cookies, url }) => {
 		if (!platform?.env?.JWT_SECRET) {
-			return fail(500, { error: 'JWT_SECRET is not configured' });
+			return fail(500, { error: 'JWT_SECRET is not configured', localPart: '', displayName: '', inviteCode: '' });
 		}
 
 		const data = await request.formData();
@@ -41,21 +41,24 @@ export const actions: Actions = {
 			return fail(400, {
 				error: 'Local part, password, and invite code are required',
 				localPart,
-				displayName
+				displayName,
+				inviteCode
 			});
 		}
 		if (!LOCAL_PART_RE.test(localPart)) {
 			return fail(400, {
 				error: 'Local part must be 2-31 chars, lowercase letters, digits, dot, underscore, or dash',
 				localPart,
-				displayName
+				displayName,
+				inviteCode
 			});
 		}
 		if (password.length < 6) {
 			return fail(400, {
 				error: 'Password must be at least 6 characters',
 				localPart,
-				displayName
+				displayName,
+				inviteCode
 			});
 		}
 
@@ -63,28 +66,29 @@ export const actions: Actions = {
 		const codeHash = await sha256Hex(inviteCode);
 		const invite = await findInviteByHash(platform.env.DB, codeHash);
 		if (!invite) {
-			return fail(401, { error: 'Invalid invite code', localPart, displayName });
+			return fail(401, { error: 'Invalid invite code', localPart, displayName, inviteCode });
 		}
 		if (invite.expires_at && invite.expires_at < Date.now()) {
-			return fail(401, { error: 'Invite code expired', localPart, displayName });
+			return fail(401, { error: 'Invite code expired', localPart, displayName, inviteCode });
 		}
 		if (invite.consumed_at) {
-			return fail(409, { error: 'Invite code already used', localPart, displayName });
+			return fail(409, { error: 'Invite code already used', localPart, displayName, inviteCode });
 		}
 		if (invite.local_part && invite.local_part.toLowerCase() !== localPart) {
 			return fail(400, {
 				error: `This invite is for local part "${invite.local_part}"`,
 				localPart,
-				displayName
+				displayName,
+				inviteCode
 			});
 		}
 
 		const email = `${localPart}@${domain}`;
 		if (await findAccountByEmail(platform.env.DB, email)) {
-			return fail(409, { error: 'That address is already taken', localPart, displayName });
+			return fail(409, { error: 'That address is already taken', localPart, displayName, inviteCode });
 		}
 		if (await findAccountByLocalPart(platform.env.DB, localPart)) {
-			return fail(409, { error: 'That local part is already taken', localPart, displayName });
+			return fail(409, { error: 'That local part is already taken', localPart, displayName, inviteCode });
 		}
 
 		const salt = newSalt();

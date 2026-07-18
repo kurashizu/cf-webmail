@@ -11,6 +11,7 @@ export const GET: RequestHandler = async ({ params, locals, platform, url }) => 
 	const key = kind === 'html' ? msg.body_html_key : msg.body_text_key;
 	if (!key) throw error(404, `${kind} body not available`);
 
+	if (!platform!.env.MAIL) throw error(503, 'Attachment storage is unavailable');
 	const obj = await platform!.env.MAIL.get(key);
 	if (!obj) throw error(404, 'Body missing in storage');
 	const body = await obj.text();

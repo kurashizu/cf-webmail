@@ -11,7 +11,7 @@ export const load: PageServerLoad = async ({ url }) => {
 export const actions: Actions = {
 	default: async ({ request, platform, cookies, url }) => {
 		if (!platform?.env?.JWT_SECRET) {
-			return fail(500, { error: 'JWT_SECRET is not configured' });
+			return fail(500, { error: 'JWT_SECRET is not configured', email: '' });
 		}
 
 		const data = await request.formData();

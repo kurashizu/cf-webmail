@@ -99,7 +99,7 @@
 		bulkBusy = true; actionError = '';
 		try {
 			const response = await fetch('/api/messages/bulk', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ids: [...selected], action, folder }) });
-			if (!response.ok) throw new Error((await response.json().catch(() => ({}))).message || 'Bulk action failed.');
+			if (!response.ok) throw new Error(((await response.json().catch(() => ({}))) as { message?: string }).message || 'Bulk action failed.');
 			if (action === 'move') messages = messages.filter((message) => !selected.has(message.id));
 			else messages = messages.map((message) => selected.has(message.id) ? { ...message, flags: updateLocalFlags(message.flags, action) } : message);
 			selected = new Set(); await invalidate('/inbox');
@@ -134,7 +134,7 @@
 		try {
 			const response = await fetch(`/api/messages/${message.id}/star`, { method: 'POST' });
 			if (!response.ok) throw new Error();
-			const result = await response.json();
+			const result = (await response.json()) as { flags: string[] };
 			message.flags = result.flags;
 			await invalidate('/inbox');
 		} catch {
@@ -153,7 +153,7 @@
 				method: isUnread(message) ? 'POST' : 'DELETE'
 			});
 			if (!response.ok) throw new Error();
-			const result = await response.json();
+			const result = (await response.json()) as { flags: string[] };
 			message.flags = result.flags;
 			await invalidate('/inbox');
 		} catch {

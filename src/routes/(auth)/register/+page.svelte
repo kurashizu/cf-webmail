@@ -23,7 +23,7 @@
 					value={form?.localPart ?? ''}
 					required
 					autocomplete="off"
-					pattern="[a-z0-9][a-z0-9._-]{1,30}"
+					pattern={"[a-z0-9][a-z0-9._-]{1,30}"}
 				/>
 				<span class="suffix">@{data.domain}</span>
 			</div>

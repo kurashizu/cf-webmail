@@ -40,7 +40,7 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
 			messageId: msg.message_id,
 			inReplyTo: msg.in_reply_to
 		},
-		attachments: attachments.map((a) => ({
+		attachments: attachments.map((a: any) => ({
 			id: a.id,
 			filename: a.filename,
 			mimeType: a.mime_type,
