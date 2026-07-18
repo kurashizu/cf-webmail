@@ -117,6 +117,7 @@
 
 	.brand {
 		display: inline-flex;
+		min-width: 0;
 		align-items: center;
 		gap: var(--space-3);
 	}
@@ -138,6 +139,7 @@
 
 	.top-search {
 		width: min(34vw, 440px);
+		min-width: 180px;
 		display: flex;
 		align-items: center;
 		gap: 9px;
@@ -164,18 +166,24 @@
 
 	.actions {
 		display: flex;
+		min-width: 0;
 		align-items: center;
 		gap: var(--space-4);
 	}
 
 	.me {
 		display: inline-flex;
+		min-width: 0;
 		align-items: center;
 		gap: var(--space-3);
 	}
 
 	.email {
+		max-width: 180px;
+		overflow: hidden;
 		font-size: 12px;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 		color: var(--text-muted);
 	}
 
@@ -316,11 +324,18 @@
 			}
 
 			.sidebar-footer { display: none; }
-			.main { flex: 1; overflow: visible; }
+			.main { flex: 1; min-width: 0; overflow: visible; }
+		}
+
+		@media (max-width: 980px) and (min-width: 761px) {
+			.topbar { padding: 0 var(--space-4); }
+			.brand-name { display: none; }
+			.email { max-width: 120px; }
+			.top-search { min-width: 160px; margin: 0 var(--space-3); }
+			.actions { gap: var(--space-2); }
 		}
 
 		@media (max-width: 420px) {
-			.topbar { padding: 0 10px; }
 			.logo-mark { width: 28px; height: 28px; }
 			.actions .btn { padding-right: 10px; padding-left: 10px; }
 		}

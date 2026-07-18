@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { invalidateAll } from '$app/navigation';
+	import { invalidate } from '$app/navigation';
 	import { formatDate, initials } from '$lib/format';
 
 	let { data } = $props();
@@ -11,13 +11,18 @@
 	let lastUpdated = $state<Date | null>(null);
 	let newMessageCount = $state(0);
 	let previousIds = new Set<string>();
+	let selected = $state<Set<string>>(new Set());
+	let bulkBusy = $state(false);
+	let selectAllInput = $state<HTMLInputElement | null>(null);
+	const allSelected = $derived(messages.length > 0 && selected.size === messages.length);
+	const partiallySelected = $derived(selected.size > 0 && selected.size < messages.length);
 
 	async function refreshInbox(manual = false) {
 		if (refreshing || document.visibilityState !== 'visible') return;
 		refreshing = true;
 		if (manual) actionError = '';
 		try {
-			await invalidateAll();
+			await invalidate('/inbox');
 			lastUpdated = new Date();
 		} catch {
 			if (manual) actionError = 'Could not refresh Inbox. Please try again.';
@@ -38,12 +43,47 @@
 	});
 
 	$effect(() => {
-		const incoming = data.messages.filter((message: any) => previousIds.size > 0 && !previousIds.has(message.id));
+		const source = data.messages;
+		const nextMessages = source.map((message: any) => ({ ...message, flags: [...message.flags] }));
+		const incoming = nextMessages.filter((message: any) => previousIds.size > 0 && !previousIds.has(message.id));
 		if (incoming.length) newMessageCount += incoming.length;
-		previousIds = new Set(data.messages.map((message: any) => message.id));
-		messages = data.messages.map((message: any) => ({ ...message, flags: [...message.flags] }));
+		previousIds = new Set(nextMessages.map((message: any) => message.id));
+		messages = nextMessages;
+		selected = new Set();
 	});
 
+	$effect(() => {
+		if (selectAllInput) selectAllInput.indeterminate = partiallySelected;
+	});
+
+	function toggleSelected(id: string) {
+		const next = new Set(selected);
+		if (next.has(id)) next.delete(id); else next.add(id);
+		selected = next;
+	}
+
+	function toggleAll() {
+		selected = allSelected ? new Set() : new Set(messages.map((message) => message.id));
+	}
+
+	async function bulkAction(action: string, folder?: string) {
+		if (!selected.size || bulkBusy) return;
+		bulkBusy = true; actionError = '';
+		try {
+			const response = await fetch('/api/messages/bulk', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ids: [...selected], action, folder }) });
+			if (!response.ok) throw new Error((await response.json().catch(() => ({}))).message || 'Bulk action failed.');
+			if (action === 'move') messages = messages.filter((message) => !selected.has(message.id));
+			else messages = messages.map((message) => selected.has(message.id) ? { ...message, flags: updateLocalFlags(message.flags, action) } : message);
+			selected = new Set(); await invalidate('/inbox');
+		} catch (error) { actionError = error instanceof Error ? error.message : 'Bulk action failed.'; }
+		finally { bulkBusy = false; }
+	}
+
+	function updateLocalFlags(flags: string[], action: string) {
+		const flag = action === 'read' || action === 'unread' ? '\\Seen' : '\\Flagged';
+		const enabled = action === 'read' || action === 'star';
+		return enabled ? (flags.includes(flag) ? flags : [...flags, flag]) : flags.filter((item) => item !== flag);
+	}
 	function isUnread(message: any) {
 		return !message.flags.includes('\\Seen');
 	}
@@ -68,7 +108,7 @@
 			if (!response.ok) throw new Error();
 			const result = await response.json();
 			message.flags = result.flags;
-			await invalidateAll();
+			await invalidate('/inbox');
 		} catch {
 			actionError = 'Could not update the message. Please try again.';
 		} finally {
@@ -87,7 +127,7 @@
 			if (!response.ok) throw new Error();
 			const result = await response.json();
 			message.flags = result.flags;
-			await invalidateAll();
+			await invalidate('/inbox');
 		} catch {
 			actionError = 'Could not update the message. Please try again.';
 		} finally {
@@ -107,7 +147,7 @@
 			});
 			if (!response.ok) throw new Error();
 			messages = messages.filter((item) => item.id !== message.id);
-			await invalidateAll();
+			await invalidate('/inbox');
 		} catch {
 			actionError = 'Could not move the message to Trash. Please try again.';
 		} finally {
@@ -147,7 +187,9 @@
 		<div class="action-error" role="alert">{actionError}</div>
 	{/if}
 
-	{#if messages.length === 0}
+		{#if messages.length > 0}<div class="bulk-bar card" class:has-selection={selected.size > 0}><label class="select-all" title="Select all messages"><input bind:this={selectAllInput} type="checkbox" checked={allSelected} onchange={toggleAll} /><span>{selected.size ? `${selected.size} selected` : 'Select all'}</span></label>{#if selected.size > 0}<div class="bulk-actions"><button disabled={bulkBusy} onclick={() => bulkAction('read')} title="Mark as read"><svg viewBox="0 0 24 24" fill="none"><path d="M3 6h18v12H3V6Zm0 1 9 7 9-7" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg><span>Read</span></button><button disabled={bulkBusy} onclick={() => bulkAction('unread')} title="Mark as unread"><svg viewBox="0 0 24 24" fill="none"><path d="M3 7h18v11H3V7Zm0 0 9 6 9-6" stroke="currentColor" stroke-width="1.7"/></svg><span>Unread</span></button><button disabled={bulkBusy} onclick={() => bulkAction('star')} title="Add star">☆<span>Star</span></button><button disabled={bulkBusy} onclick={() => bulkAction('unstar')} title="Remove star">★<span>Unstar</span></button><button class="trash" disabled={bulkBusy} onclick={() => bulkAction('move', 'Trash')} title="Move to Trash"><svg viewBox="0 0 24 24" fill="none"><path d="M5 7h14m-11 0 1 13h6l1-13m-6 4v5m4-5v5M9 7l1-3h4l1 3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>Trash</span></button></div>{/if}</div>{/if}
+
+		{#if messages.length === 0}
 		<div class="empty">
 			<div class="empty-icon" aria-hidden="true">✉</div>
 			<h2>Your inbox is clear</h2>
@@ -156,7 +198,8 @@
 	{:else}
 		<ul class="list" aria-label="Inbox messages">
 			{#each messages as message (message.id)}
-				<li class="msg" class:unread={isUnread(message)}>
+				<li class="msg" class:unread={isUnread(message)} class:selected={selected.has(message.id)}>
+					<label class="row-select" aria-label={`Select ${message.subject}`}><input type="checkbox" checked={selected.has(message.id)} onchange={() => toggleSelected(message.id)} /></label>
 					<a href={`/inbox/${message.id}`} class="message-link" aria-label={`Open ${message.subject}`}>
 						<div class="avatar" aria-hidden="true">{initials(message.fromName || message.fromAddr)}</div>
 						<div class="meta">
@@ -229,11 +272,54 @@
 	.empty p { margin: 0; font-size: 13px; }
 	.empty code { padding: 2px 6px; border-radius: var(--radius-sm); background: var(--bg-elevated); font-size: 12px; }
 	.list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; background: var(--bg-secondary); }
-	.msg { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; border-bottom: 1px solid var(--border); transition: background var(--transition-fast); }
+	.msg { position: relative; display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; border-bottom: 1px solid var(--border); transition: background var(--transition-fast); }
+	.msg.selected { background: var(--accent-subtle); }
+	.row-select { display: grid; place-items: center; padding-left: 8px; cursor: pointer; }
+	.row-select input, .select-all input {
+		width: 16px;
+		min-width: 16px;
+		max-width: 16px;
+		height: 16px;
+		min-height: 16px;
+		max-height: 16px;
+		aspect-ratio: 1 / 1;
+		flex: 0 0 16px;
+		padding: 0;
+		margin: 0;
+		appearance: none;
+		-webkit-appearance: none;
+		border: 1px solid var(--border-hover);
+		border-radius: 4px;
+		background: color-mix(in srgb, var(--bg-elevated) 78%, transparent);
+		cursor: pointer;
+		transition: border-color var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast);
+	}
+	.row-select input:hover, .select-all input:hover { border-color: var(--accent); }
+	.row-select input:focus-visible, .select-all input:focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: 2px; }
+	.row-select input:checked, .select-all input:checked, .select-all input:indeterminate {
+		border-color: var(--accent);
+		background-color: var(--accent);
+		box-shadow: inset 0 0 0 1px color-mix(in srgb, white 10%, transparent);
+	}
+	.row-select input:checked, .select-all input:checked {
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='m3.5 8 3 3 6-6' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+	}
+	.select-all input:indeterminate {
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8h8' fill='none' stroke='white' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+	}
+	.bulk-bar { min-height: 47px; display: flex; align-items: center; gap: 14px; margin-bottom: 10px; padding: 7px 12px; overflow: hidden; }
+	.bulk-bar.has-selection { border-color: rgba(255,107,53,.3); }
+	.select-all { display: flex; flex: none; align-items: center; gap: 8px; color: var(--text-muted); font-size: 11px; cursor: pointer; }
+	.bulk-actions { min-width: 0; display: flex; flex: 1; align-items: center; gap: 3px; padding-left: 12px; border-left: 1px solid var(--border); overflow-x: auto; scrollbar-width: thin; }
+	.bulk-actions button { min-height: 31px; display: flex; flex: none; align-items: center; gap: 5px; padding: 5px 8px; border: 0; border-radius: 7px; background: transparent; color: var(--text-muted); font-size: 11px; white-space: nowrap; }
+	.bulk-actions button:hover:not(:disabled) { background: var(--bg-elevated); color: var(--text-primary); }
+	.bulk-actions button.trash:hover:not(:disabled) { color: #ff9292; }
+	.bulk-actions svg { width: 16px; height: 16px; }
+	.bulk-actions button:disabled { opacity: .45; }
 	.msg:last-child { border-bottom: 0; }
 	.msg:hover, .msg:focus-within { background: var(--bg-card); }
 	.msg.unread { background: color-mix(in srgb, var(--accent-subtle) 42%, var(--bg-secondary)); }
-	.message-link { min-width: 0; display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: var(--space-3); padding: 14px 8px 14px 16px; color: inherit; }
+	.message-link { min-width: 0; display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: var(--space-3); padding: 14px 8px 14px 4px; color: inherit; }
 	.message-link:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 	.avatar { width: 40px; height: 40px; display: grid; place-items: center; flex: none; border: 1px solid var(--border); border-radius: 50%; background: var(--bg-elevated); color: var(--accent); font-size: 12px; font-weight: 700; }
 	.meta { min-width: 0; }
@@ -257,17 +343,20 @@
 	@media (max-width: 720px) {
 		.page { padding: var(--space-4); }
 		.page-head { margin-bottom: var(--space-4); }
-		.message-link { grid-template-columns: 34px minmax(0, 1fr) auto; padding: 12px 6px 12px 12px; gap: 10px; }
+		.message-link { grid-template-columns: 34px minmax(0, 1fr) auto; padding: 12px 6px 12px 4px; gap: 10px; }
 		.avatar { width: 34px; height: 34px; }
 		.row-actions { padding-right: 6px; opacity: 1; }
 		.icon-button { width: 30px; }
 		.icon-button.danger { display: none; }
-		.preview { max-width: 60vw; }
+		.preview { max-width: 100%; }
 	}
 
 	@media (max-width: 480px) {
 		.page { padding: 14px 10px; }
-		.sync-status, .count { display: none; }
+		.bulk-actions span { display: none; }
+		.bulk-actions { gap: 0; padding-left: 7px; }
+		.bulk-actions button { padding: 6px; }
+		.bulk-bar { padding: 7px 9px; }
 		.list { border-right: 0; border-left: 0; border-radius: 0; }
 		.avatar { display: none; }
 		.message-link { grid-template-columns: minmax(0, 1fr) auto; padding-left: 10px; }

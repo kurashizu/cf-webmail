@@ -1,61 +1,14 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
-	import { onMount } from 'svelte';
+
 
 	let { data, form } = $props();
-	let generating = $state(false);
-	let generated = $state<string | null>(null);
-	let copied = $state(false);
-	let invites = $state<any[]>([]);
-	let inviteError = $state<string | null>(null);
+
 	let showPasswords = $state(false);
 	let profileSaving = $state(false);
 	let passwordSaving = $state(false);
 
-	async function loadInvites() {
-		try {
-			const response = await fetch('/api/invites');
-			if (!response.ok) throw new Error();
-			const result = await response.json();
-			invites = result.invites || [];
-		} catch {
-			inviteError = 'Could not load invite codes.';
-		}
-	}
-
-	async function createInvite() {
-		generating = true;
-		inviteError = null;
-		generated = null;
-		copied = false;
-		try {
-			const response = await fetch('/api/invites', { method: 'POST' });
-			const result = await response.json();
-			if (!response.ok) throw new Error(result.message || 'Failed to create invite');
-			generated = result.code;
-			await loadInvites();
-		} catch (error) {
-			inviteError = error instanceof Error ? error.message : 'Failed to create invite.';
-		} finally {
-			generating = false;
-		}
-	}
-
-	async function copyInvite() {
-		if (!generated) return;
-		try {
-			await navigator.clipboard.writeText(generated);
-			copied = true;
-			setTimeout(() => (copied = false), 1800);
-		} catch {
-			inviteError = 'Could not copy the code. Select and copy it manually.';
-		}
-	}
-
-	onMount(() => {
-		if (data.user.role === 'admin') loadInvites();
-	});
 </script>
 
 <svelte:head><title>Settings · KRSZ Mail</title></svelte:head>
@@ -151,49 +104,11 @@
 			{#if data.user.role === 'admin'}
 				<a class="admin-link card" href="/admin/users">
 					<div class="section-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M15 19a6 6 0 0 0-12 0M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7-5h5m-2.5-2.5v5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>
-					<div><strong>User management</strong><span>Manage accounts, access, and mailbox data.</span></div>
+					<div><strong>Administration</strong><span>Manage users, roles, passwords, sessions, and invitations.</span></div>
 					<svg class="arrow" viewBox="0 0 24 24" fill="none"><path d="m9 18 6-6-6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
 				</a>
 			{/if}
 
-			{#if data.user.role === 'admin'}
-				<section class="card setting-card">
-					<div class="section-heading invite-heading">
-						<div class="section-icon" aria-hidden="true">
-							<svg viewBox="0 0 24 24" fill="none"><path d="M15 19a6 6 0 0 0-12 0M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM17 8v6M14 11h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-						</div>
-						<div><h2>Invitations</h2><p>Generate single-use codes for new KRSZ Mail accounts.</p></div>
-						<button class="btn btn-primary" type="button" onclick={createInvite} disabled={generating}>
-							<svg class="button-icon" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-							{generating ? 'Generating…' : 'New invite'}
-						</button>
-					</div>
-
-					{#if generated}
-						<div class="generated">
-							<div><span>New invite code</span><code>{generated}</code></div>
-							<button class="btn btn-ghost copy" type="button" onclick={copyInvite}>
-								<svg class="button-icon" viewBox="0 0 24 24" fill="none"><rect x="8" y="8" width="11" height="11" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" stroke="currentColor" stroke-width="1.7"/></svg>
-								{copied ? 'Copied' : 'Copy'}
-							</button>
-						</div>
-					{/if}
-					{#if inviteError}<div class="notice error" role="alert">{inviteError}</div>{/if}
-
-					{#if invites.length}
-						<div class="table-wrap"><table>
-							<thead><tr><th>Created</th><th>Assigned address</th><th>Status</th></tr></thead>
-							<tbody>{#each invites as invite (invite.code_hash)}
-								<tr>
-									<td>{new Date(invite.created_at).toLocaleString()}</td>
-									<td>{invite.local_part ? `${invite.local_part}@krsz.in` : 'Any available address'}</td>
-									<td>{#if invite.consumed_at}<span class="status used">Used</span>{:else if invite.expires_at && invite.expires_at < Date.now()}<span class="status expired">Expired</span>{:else}<span class="status active">Active</span>{/if}</td>
-								</tr>
-							{/each}</tbody>
-						</table></div>
-					{/if}
-				</section>
-			{/if}
 		</div>
 	</div>
 </section>
@@ -224,7 +139,7 @@
 	.section-icon svg { width: 19px; height: 19px; }
 	.section-heading h2 { margin: 0; font-size: 16px; font-weight: 600; }
 	.section-heading p { margin: 3px 0 0; color: var(--text-muted); font-size: 12px; }
-	.invite-heading .btn { margin-left: auto; white-space: nowrap; }
+
 	.field { display: grid; gap: 7px; }
 	.field span { color: var(--text-secondary); font-size: 12px; font-weight: 500; }
 	.field input { width: 100%; min-height: 42px; }
@@ -234,24 +149,11 @@
 	.toggle input { width: 15px; height: 15px; margin: 0; accent-color: var(--accent); }
 	.form-actions { display: flex; justify-content: flex-end; margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--border); }
 	.btn:disabled { opacity: .55; cursor: wait; box-shadow: none; }
-	.button-icon { width: 16px; height: 16px; }
+
 	.notice { margin-top: var(--space-3); padding: 10px 12px; border: 1px solid; border-radius: var(--radius-md); font-size: 12px; }
 	.notice.error { border-color: rgba(255,80,80,.3); background: rgba(255,80,80,.08); color: #ff9b9b; }
 	.notice.success { border-color: rgba(80,200,120,.3); background: rgba(80,200,120,.08); color: #82d9a6; }
-	.generated { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-4); padding: var(--space-3) var(--space-4); border: 1px solid rgba(255,107,53,.28); border-radius: var(--radius-md); background: var(--accent-subtle); }
-	.generated div { min-width: 0; display: grid; gap: 4px; }
-	.generated span { color: var(--text-muted); font-size: 10px; letter-spacing: .07em; text-transform: uppercase; }
-	.generated code { overflow: hidden; color: var(--text-primary); font-size: 14px; text-overflow: ellipsis; }
-	.copy { flex: none; }
-	.table-wrap { overflow-x: auto; }
-	table { width: 100%; border-collapse: collapse; font-size: 12px; }
-	th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
-	th { color: var(--text-muted); font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
-	td { color: var(--text-secondary); }
-	.status { padding: 3px 8px; border-radius: var(--radius-full); font-size: 9px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
-	.status.active { background: rgba(80,200,120,.14); color: #82d9a6; }
-	.status.used { background: var(--bg-elevated); color: var(--text-muted); }
-	.status.expired { background: rgba(255,80,80,.1); color: #ff9292; }
+
 	@media (max-width: 800px) {
 		.page { padding: var(--space-4); }
 		.settings-grid { grid-template-columns: 1fr; }
@@ -264,10 +166,7 @@
 		.setting-card, .overview { padding: var(--space-4); }
 		.password-grid { grid-template-columns: 1fr; }
 		.password-grid .full { grid-column: auto; }
-		.invite-heading { flex-wrap: wrap; }
-		.invite-heading .btn { width: 100%; justify-content: center; margin-left: 0; }
-		.generated { align-items: stretch; flex-direction: column; }
-		.copy { justify-content: center; }
+
 		.account-details { grid-template-columns: 1fr; }
 	}
 </style>

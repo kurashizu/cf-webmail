@@ -91,7 +91,10 @@ export async function listAccounts(db) {
 		.prepare(
 			`SELECT a.id, a.local_part, a.email, a.display_name, a.role, a.created_at, a.updated_at,
 			        COUNT(DISTINCT m.id) AS message_count,
-			        COALESCE(SUM(CASE WHEN m.folder = 'INBOX' AND m.flags NOT LIKE '%\\Seen%' THEN 1 ELSE 0 END), 0) AS unread_count
+			        COALESCE(SUM(CASE WHEN m.folder = 'INBOX' AND m.flags NOT LIKE '%\\Seen%' THEN 1 ELSE 0 END), 0) AS unread_count,
+			        COALESCE(SUM(m.size), 0) AS storage_bytes,
+			        MAX(m.received_at) AS last_message_at,
+			        COUNT(DISTINCT CASE WHEN m.has_attachments = 1 THEN m.id END) AS messages_with_attachments
 			   FROM accounts a
 			   LEFT JOIN messages m ON m.account_id = a.id
 			  GROUP BY a.id
@@ -99,6 +102,13 @@ export async function listAccounts(db) {
 		)
 		.all();
 	return result.results || [];
+}
+
+export async function updateAccountByAdmin(db, accountId, displayName, role) {
+	await db
+		.prepare('UPDATE accounts SET display_name = ?, role = ?, updated_at = ? WHERE id = ?')
+		.bind(displayName || null, role, Date.now(), accountId)
+		.run();
 }
 
 export async function listAccountStorageKeys(db, accountId) {
@@ -497,7 +507,19 @@ export async function consumeInvite(db, codeHash, accountId) {
 
 export async function listInvites(db) {
 	const result = await db
-		.prepare('SELECT * FROM invite_codes ORDER BY created_at DESC')
+		.prepare(
+			`SELECT i.*,
+			        creator.email AS created_by_email,
+			        consumer.email AS consumed_by_email
+			   FROM invite_codes i
+			   LEFT JOIN accounts creator ON creator.id = i.created_by
+			   LEFT JOIN accounts consumer ON consumer.id = i.consumed_by
+			  ORDER BY i.created_at DESC`
+		)
 		.all();
 	return result.results || [];
+}
+
+export async function deleteInvite(db, codeHash) {
+	return db.prepare('DELETE FROM invite_codes WHERE code_hash = ?').bind(codeHash).run();
 }

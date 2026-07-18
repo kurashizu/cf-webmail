@@ -52,67 +52,100 @@ async function handleInbound(message, env, ctx) {
 
 	let bodyHtmlKey = null;
 	let bodyTextKey = null;
-	if (parsed.html) {
-		bodyHtmlKey = bodyKey(accountId, folder, newId, 'html');
-		await env.MAIL.put(bodyHtmlKey, parsed.html, {
-			httpMetadata: { contentType: 'text/html; charset=utf-8' }
-		});
-	}
-	if (parsed.text) {
-		bodyTextKey = bodyKey(accountId, folder, newId, 'txt');
-		await env.MAIL.put(bodyTextKey, parsed.text, {
-			httpMetadata: { contentType: 'text/plain; charset=utf-8' }
-		});
-	}
-
-	let hasAttachments = 0;
-	if (Array.isArray(parsed.attachments) && parsed.attachments.length) {
-		for (const att of parsed.attachments) {
+	const attachmentRecords = Array.isArray(parsed.attachments)
+		? parsed.attachments.map((att) => {
+			const id = uuid();
 			const filename = att.filename || 'attachment';
-			const mimeType = att.mimeType || 'application/octet-stream';
-			const data = att.content;
-			const r2key = attachmentKey(accountId, newId, filename);
-			await env.MAIL.put(r2key, data, {
-				httpMetadata: { contentType: mimeType }
+			const data = toBytes(att.content);
+			return {
+				id,
+				filename,
+				mimeType: att.mimeType || 'application/octet-stream',
+				data,
+				contentId: att.contentId ? stripCid(att.contentId) : null,
+				r2Key: attachmentKey(accountId, newId, id, filename)
+			};
+		})
+		: [];
+
+	const storedKeys = [];
+	try {
+		if (parsed.html) {
+			bodyHtmlKey = bodyKey(accountId, folder, newId, 'html');
+			await env.MAIL.put(bodyHtmlKey, parsed.html, {
+				httpMetadata: { contentType: 'text/html; charset=utf-8' }
 			});
+			storedKeys.push(bodyHtmlKey);
+		}
+		if (parsed.text) {
+			bodyTextKey = bodyKey(accountId, folder, newId, 'txt');
+			await env.MAIL.put(bodyTextKey, parsed.text, {
+				httpMetadata: { contentType: 'text/plain; charset=utf-8' }
+			});
+			storedKeys.push(bodyTextKey);
+		}
+
+		for (const att of attachmentRecords) {
+			await env.MAIL.put(att.r2Key, att.data, {
+				httpMetadata: { contentType: att.mimeType }
+			});
+			storedKeys.push(att.r2Key);
+		}
+
+		const receivedAt = parseDate(parsed.date) || Date.now();
+		const inserted = await insertMessage(env.DB, {
+			id: newId,
+			accountId,
+			folder,
+			direction: 'inbound',
+			messageId,
+			inReplyTo,
+			threadId,
+			fromAddr,
+			fromName,
+			toAddrs,
+			ccAddrs,
+			subject,
+			preview,
+			bodyHtmlKey,
+			bodyTextKey,
+			hasAttachments: attachmentRecords.length ? 1 : 0,
+			flags,
+			size,
+			receivedAt
+		});
+
+		if (!inserted) {
+			await deleteStoredObjects(env.MAIL, storedKeys);
+			console.info('[inbound] duplicate message ignored', { recipient, messageId });
+			return;
+		}
+
+		for (const att of attachmentRecords) {
 			await insertAttachment(env.DB, {
+				id: att.id,
 				accountId,
 				messageId: newId,
-				filename,
-				mimeType,
-				size: data?.byteLength ?? data?.length ?? 0,
-				contentId: att.contentId ? stripCid(att.contentId) : null,
-				r2Key: r2key
+				filename: att.filename,
+				mimeType: att.mimeType,
+				size: att.data.byteLength,
+				contentId: att.contentId,
+				r2Key: att.r2Key
 			});
-			hasAttachments = 1;
 		}
-	}
 
-	const receivedAt = parseDate(parsed.date) || Date.now();
-	const inserted = await insertMessage(env.DB, {
-		id: newId,
-		accountId,
-		folder,
-		direction: 'inbound',
-		messageId,
-		inReplyTo,
-		threadId,
-		fromAddr,
-		fromName,
-		toAddrs,
-		ccAddrs,
-		subject,
-		preview,
-		bodyHtmlKey,
-		bodyTextKey,
-		hasAttachments,
-		flags,
-		size,
-		receivedAt
-	});
-
-	if (inserted) {
 		await bumpFolderOnReceive(env.DB, accountId, folder, receivedAt);
+	} catch (error) {
+		await env.DB.prepare('DELETE FROM attachments WHERE account_id = ? AND message_id = ?').bind(accountId, newId).run().catch(() => {});
+		await env.DB.prepare('DELETE FROM messages WHERE account_id = ? AND id = ?').bind(accountId, newId).run().catch(() => {});
+		await deleteStoredObjects(env.MAIL, storedKeys);
+		console.error('[inbound] persistence failed', {
+			recipient,
+			messageId,
+			attachmentCount: attachmentRecords.length,
+			error: error instanceof Error ? error.message : String(error)
+		});
+		throw error;
 	}
 }
 
@@ -120,9 +153,31 @@ function bodyKey(accountId, folder, messageId, kind) {
 	return `bodies/${accountId}/${folder}/${messageId}.${kind === 'html' ? 'html' : 'txt'}`;
 }
 
-function attachmentKey(accountId, messageId, filename) {
+function attachmentKey(accountId, messageId, attachmentId, filename) {
 	const safe = (filename || 'attachment').replace(/[^A-Za-z0-9._-]+/g, '_');
-	return `attachments/${accountId}/${messageId}/${safe}`;
+	return `attachments/${accountId}/${messageId}/${attachmentId}-${safe}`;
+}
+
+function toBytes(content) {
+	if (content instanceof Uint8Array) return content;
+	if (content instanceof ArrayBuffer) return new Uint8Array(content);
+	if (ArrayBuffer.isView(content)) {
+		return new Uint8Array(content.buffer, content.byteOffset, content.byteLength);
+	}
+	if (typeof content === 'string') return new TextEncoder().encode(content);
+	throw new TypeError('Unsupported attachment content type');
+}
+
+async function deleteStoredObjects(bucket, keys) {
+	if (!bucket || !keys.length) return;
+	try {
+		await bucket.delete(keys);
+	} catch (error) {
+		console.error('[inbound] cleanup failed', {
+			keys: keys.length,
+			error: error instanceof Error ? error.message : String(error)
+		});
+	}
 }
 
 function cleanMessageId(v) {
@@ -204,11 +259,7 @@ async function readAll(stream) {
 }
 
 async function parseEmail(raw) {
-	// Use postal-mime — bundled by the SvelteKit server build, so it's
-	// available at runtime as a global import via the bundler. We import
-	// lazily so the worker entry stays small.
-	const mod = await import('postal-mime');
-	const parser = new mod.default();
+	const parser = new PostalMime();
 	return await parser.parse(raw);
 }
 

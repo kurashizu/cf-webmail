@@ -1,7 +1,7 @@
 # KRSZ Mail
 
-KRSZ Mail is a private, invite-only email service for `krsz.in`, built on Cloudflare's edge stack: Workers + D1 + R2 + Email Service.
-No SMTP, no IMAP, no third-party providers.
+KRSZ Mail is an invite-only email service for `krsz.in`, built on Cloudflare's edge stack: Workers + D1 + R2 + KV + Email Routing.
+Inbound mail and the application control plane run on Cloudflare. External outbound delivery uses the Resend API; mail between local accounts is delivered directly inside the Worker.
 
 ## What this is
 
@@ -34,7 +34,8 @@ No SMTP, no IMAP, no third-party providers.
 - [x] Internal `@krsz.in` delivery bypasses Resend so attachments are never blocked
 - [x] Search with folder, read/unread, starred, attachments, date range filters
 - [x] Auto-updating Inbox (10s polling, visibility-aware)
-- [x] Admin user management at `/admin/users` (list, disable/enable, delete)
+- [x] Admin console: invitations, profiles, roles, password resets, sessions, access, deletion
+- [x] Bulk message selection and read/unread, star/unstar, Trash/Inbox actions
 - [x] Reply, mark unread, delete, iframe-safe body view
 - [x] Attachment download with account isolation and safe headers
 
@@ -44,8 +45,8 @@ When a sender inside `@krsz.in` sends to another `@krsz.in` account, the Worker 
 
 ## Admin tooling
 
-- `/admin/users` (admin only): list users, disable / enable accounts, delete accounts and their R2 data.
-- The admin cannot disable or delete themselves.
+- `/admin/users` (admin only): manage invitations, profiles, roles, passwords, sessions, account access, and mailbox deletion.
+- Self-protection and last-administrator guards prevent accidental lockout.
 - Disabled accounts are rejected at login and lose their existing session.
 
 ## Domain setup
@@ -94,17 +95,17 @@ pnpm exec wrangler secret put RESEND_API_KEY
 | `GET /{folder}/{id}` | Message detail |
 | `GET /compose` / `POST /compose?/send` | New message (with attachments) |
 | `GET /search` | Search with filters |
-| `GET /settings` | Profile, password, admin invites |
+| `GET /settings` | Profile and password settings |
 | `GET /admin/users` | Admin user management |
 | `POST /logout` | Sign-out |
 | `GET /api/health` | Binding status |
-| `GET/POST /api/invites` | Admin invite management |
+| `GET/POST/DELETE /api/invites` | Admin invite management |
 | `GET /api/messages/{id}/body?kind=html\|text` | Read body from R2 |
 | `GET /api/messages/{id}/attachments/{aid}` | Download attachment |
 | `POST /api/messages/{id}/read` | Toggle \Seen flag |
 | `POST /api/messages/{id}/star` | Toggle \Flagged flag |
 | `POST /api/messages/{id}/move` | Move to folder |
-| `POST /api/messages/send` | Send (JSON API) |
+| `POST /api/messages/bulk` | Bulk message actions |
 | `DELETE /api/trash` | Empty Trash (account-scoped) |
 | `GET/POST/DELETE /api/admin/users` | Admin user management |
 
@@ -171,4 +172,4 @@ vite.config.ts                  # Injects email() handler into _worker.js
 
 ## License
 
-Private project.
+MIT. See [`LICENSE`](LICENSE).

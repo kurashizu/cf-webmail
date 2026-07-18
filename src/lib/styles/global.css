@@ -52,7 +52,7 @@ button {
 	cursor: pointer;
 }
 
-input,
+input:not([type='checkbox']):not([type='radio']),
 textarea,
 select {
 	font: inherit;
@@ -63,7 +63,7 @@ select {
 	padding: var(--space-2) var(--space-3);
 	transition: border-color var(--transition-fast);
 }
-input:focus,
+input:not([type='checkbox']):not([type='radio']):focus,
 textarea:focus,
 select:focus {
 	outline: none;

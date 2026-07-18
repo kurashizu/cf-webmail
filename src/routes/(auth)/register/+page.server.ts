@@ -13,10 +13,11 @@ import {
 } from '$lib/server/db/queries';
 import { signSession, registerSession } from '$lib/server/auth/session';
 
-export const load: PageServerLoad = async ({ platform }) => {
+export const load: PageServerLoad = async ({ platform, url }) => {
 	return {
 		domain: platform?.env?.MAIL_DOMAIN || 'krsz.in',
-		hasInvites: true
+		hasInvites: true,
+		inviteCode: url.searchParams.get('invite') || ''
 	};
 };
 
@@ -34,7 +35,7 @@ export const actions: Actions = {
 		const password = String(data.get('password') || '');
 		const inviteCode = String(data.get('invite_code') || '').trim();
 		const domain = String(data.get('domain') || 'krsz.in').toLowerCase();
-		const role = String(data.get('role') || 'user').toLowerCase();
+
 
 		if (!localPart || !password || !inviteCode) {
 			return fail(400, {
@@ -98,7 +99,7 @@ export const actions: Actions = {
 			passwordHash,
 			passwordSalt: salt,
 			passwordIters: 100_000,
-			role: role === 'admin' ? 'admin' : 'user'
+			role: 'user'
 		});
 		await ensureFolders(platform.env.DB, id);
 				await consumeInvite(platform.env.DB, codeHash, id);
@@ -112,7 +113,7 @@ export const actions: Actions = {
 				}
 
 		const token = await signSession(
-			{ accountId: id, email, role: role === 'admin' ? 'admin' : 'user' },
+			{ accountId: id, email, role: 'user' },
 			platform.env.JWT_SECRET
 		);
 		await registerSession(platform.env.SESSIONS, id, token);

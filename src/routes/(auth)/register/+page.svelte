@@ -41,7 +41,7 @@
 		</label>
 
 		<label class="field">
-			<span>Password (min 10 chars)</span>
+			<span>Password (min 6 characters)</span>
 			<input
 				type="password"
 				name="password"
@@ -56,6 +56,7 @@
 			<input
 				type="text"
 				name="invite_code"
+				value={form?.inviteCode ?? data.inviteCode ?? ''}
 				required
 				autocomplete="off"
 				placeholder="paste the code from the admin"
