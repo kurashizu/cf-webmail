@@ -44,10 +44,12 @@ src/
 │   │   ├── compose/                 # Composer + quota projection
 │   │   ├── search/                  # Search with filters
 │   │   ├── settings/                # Profile / password / storage card
+│   │   ├── api-docs/                # API reference (HTML)
 │   │   └── admin/users/             # Admin console + quota editor
 │   └── api/
 │       ├── health/
 │       ├── storage/                 # GET quota snapshot (self)
+│       ├── docs/                    # GET API catalog as JSON
 │       ├── invites/
 │       ├── admin/users/             # Admin CRUD + set_quota
 │       ├── trash/                   # Empty Trash + reconcile
@@ -61,7 +63,8 @@ src/
         ├── crypto/kdf.js
         ├── cron/maintenance.js      # Trash retention + storage reconciliation
         ├── db/{queries.js,storage.js}
-        └── mail/{inbound.js,outbound.js,email-routing.js}
+        ├── mail/{inbound.js,outbound.js,email-routing.js}
+        └── api-docs/spec.ts                  # Single source of truth for /api/docs + /api-docs
 
 migrations/0001_init.sql
 migrations/0002_storage_quota.sql   # quota_bytes, quota_messages, storage_used_bytes
@@ -111,6 +114,30 @@ UI surfaces:
 - `/inbox` and `/[folder]` banners at `>=85%` (high) / `>=95%` (critical).
 - `/compose` pre-send projection warning when send would exceed quota.
 - `/admin/users` drawer has an Edit Quota modal (MB + message count, `0` = unlimited).
+
+## API documentation
+
+Two endpoints share a single source of truth at
+`src/lib/server/api-docs/spec.ts` so they never drift apart:
+
+- `GET /api-docs` (HTML, behind the mail layout) — interactive reference with a
+  sticky table of contents, colour-coded HTTP verbs, and a copy-URL button.
+- `GET /api/docs` (JSON, requires session) — machine-readable version for
+  client SDK generation.
+
+Both endpoints advertise the same catalogue: getting-started (auth, error
+codes), account, messages, invitations (admin), user administration (admin),
+and system. The sidebar footer of every logged-in page links to `/api-docs`;
+the public landing footer on `/` also exposes the link.
+
+When you add a new JSON endpoint, append it to `apiSections` in `spec.ts` —
+the in-app reference and the JSON catalog pick it up automatically. Each entry
+needs an `id`, `method`, `path`, `summary`, `description`, `auth`
+(`'session' | 'admin' | 'public'`), and optionally `requestFields`,
+`responseExample`, and `notes`. Anything you don't write a description for
+should still get at least a one-line summary.
+
+## Cron
 
 Cron `scheduled()` runs at `0 3 * * *`:
 

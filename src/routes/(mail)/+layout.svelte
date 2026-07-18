@@ -84,6 +84,10 @@
 					<svg class="nav-icon" viewBox="0 0 24 24" fill="none"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="currentColor" stroke-width="1.7"/><path d="m19.4 15 .1.1 1.1 1.7-2.8 2.8-1.7-1.1-.1-.1a8 8 0 0 1-2 .8V21h-4v-2.4a8 8 0 0 1-2-.8l-.1.1-1.7 1.1-2.8-2.8 1.1-1.7.1-.1a8 8 0 0 1-.8-2H3V8.5h2.4a8 8 0 0 1 .8-2l-.1-.1L5 4.7l2.8-2.8L9.5 3l.1.1a8 8 0 0 1 2-.8V0h4v2.4a8 8 0 0 1 2 .8l.1-.1L19.4 2l2.8 2.8-1.1 1.7-.1.1a8 8 0 0 1 .8 2H24v4h-2.4a8 8 0 0 1-.8 2Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" transform="scale(.82) translate(2.6 2.6)"/></svg>
 					Settings
 				</a>
+				<a href="/api-docs" class="footer-link">
+					<svg class="nav-icon" viewBox="0 0 24 24" fill="none"><path d="m8 7 5-5 5 5M13 2v14M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+					API reference
+				</a>
 			</div>
 		</aside>
 

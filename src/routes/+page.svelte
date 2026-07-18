@@ -54,7 +54,7 @@
 
 	<footer>
 		<span>© 2026 KRSZ Mail</span>
-		<span>krsz.in</span>
+		<span><a href="/login">Sign in</a> · <a href="/api-docs">API</a> · krsz.in</span>
 	</footer>
 </main>
 
