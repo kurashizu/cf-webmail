@@ -13,6 +13,16 @@
 		}
 	});
 
+	const activeSection = $derived(
+		data.sections.find((section) => section.id === activeSectionId) ?? data.sections[0]
+	);
+	const activeIndex = $derived(
+		Math.max(
+			0,
+			data.sections.findIndex((section) => section.id === activeSectionId)
+		)
+	);
+
 	const exampleRequest = $derived(
 		[
 			`# 1. Log in through the form action to obtain a Session cookie.`,
@@ -27,19 +37,11 @@
 		].join('\n')
 	);
 
-	function scrollToSection(id: string) {
-		if (typeof document === 'undefined') return;
-		const el = document.getElementById(id);
-		if (!el) return;
-		const offset = 96;
-		const top = el.getBoundingClientRect().top + window.scrollY - offset;
-		window.scrollTo({ top, behavior: 'smooth' });
-		history.replaceState(null, '', `#${id}`);
-	}
-
 	function selectSection(id: string) {
 		activeSectionId = id;
-		scrollToSection(id);
+		if (typeof window !== 'undefined') {
+			history.replaceState(null, '', `#${id}`);
+		}
 	}
 
 	async function copyJsonUrl() {
@@ -74,28 +76,10 @@
 
 	onMount(() => {
 		if (typeof window === 'undefined') return;
-		const observed = new Set<string>();
-		const observer = new IntersectionObserver(
-			(entries) => {
-				for (const entry of entries) {
-					if (entry.isIntersecting && entry.target.id) {
-						observed.add(entry.target.id);
-					}
-				}
-				for (const section of data.sections) {
-					if (observed.has(section.id)) {
-						activeSectionId = section.id;
-						break;
-					}
-				}
-			},
-			{ rootMargin: '-30% 0px -55% 0px', threshold: 0 }
-		);
-		for (const section of data.sections) {
-			const el = document.getElementById(section.id);
-			if (el) observer.observe(el);
+		const initial = window.location.hash.replace(/^#/, '');
+		if (initial && data.sections.some((section) => section.id === initial)) {
+			activeSectionId = initial;
 		}
-		return () => observer.disconnect();
 	});
 </script>
 
@@ -109,154 +93,180 @@
 		<p class="eyebrow">Developer reference</p>
 		<h1>{data.meta.title}</h1>
 		<p class="subtitle">{data.meta.tagline}</p>
-		<div class="meta-row">
-			<a class="badge-link" href={data.jsonPath} target="_blank" rel="noopener">
-				<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m8 7 5-5 5 5M13 2v14M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-				<span>JSON reference</span>
-				<code>/api/docs</code>
-			</a>
-			<button
-				type="button"
-				class="copy-btn"
-				class:copied={copyState === 'copied'}
-				class:errored={copyState === 'error'}
-				onclick={copyJsonUrl}
-			>
-				{#if copyState === 'copied'}
-					<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 12 4 4 10-10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-					Copied URL
-				{:else if copyState === 'error'}
-					<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7"/><path d="M12 8v5m0 3h.01" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-					Press ⌘/Ctrl+C
-				{:else}
-					<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-					Copy URL
-				{/if}
-			</button>
-		</div>
 	</header>
 
-	<div class="layout">
-		<aside class="toc card" aria-label="Sections">
-			<p class="toc-title">Contents</p>
-			<nav>
-				{#each data.sections as section (section.id)}
-					<a
-						class="toc-link"
-						class:active={activeSectionId === section.id}
-						href={`#${section.id}`}
-						onclick={(event) => {
-							event.preventDefault();
-							selectSection(section.id);
-						}}
-					>
-						<span class="dot" aria-hidden="true"></span>
-						<span>{section.title}</span>
-					</a>
-				{/each}
-			</nav>
-		</aside>
-
-		<div class="content">
-			<div class="callout card">
-				<div class="callout-icon" aria-hidden="true">
-					<svg viewBox="0 0 24 24" fill="none"><path d="M9 12a3 3 0 1 0 6 0 3 3 0 0 0-6 0Zm9-1a8 8 0 0 1-.2 1.8l2 1.6-2 3.4-2.4-1a8 8 0 0 1-3 1.8l-.4 2.5h-4l-.4-2.6a8 8 0 0 1-3-1.7l-2.4 1-2-3.4 2-1.6a8 8 0 0 1 0-3.6l-2-1.6 2-3.4 2.4 1a8 8 0 0 1 3-1.7L8 4h4l.4 2.5a8 8 0 0 1 3 1.8l2.4-1 2 3.4-2 1.6a8 8 0 0 1 .2 1.7Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
-				</div>
+	<div class="intro card">
+		<div class="intro-icon" aria-hidden="true">
+			<svg viewBox="0 0 24 24" fill="none"><path d="M9 12a3 3 0 1 0 6 0 3 3 0 0 0-6 0Zm9-1a8 8 0 0 1-.2 1.8l2 1.6-2 3.4-2.4-1a8 8 0 0 1-3 1.8l-.4 2.5h-4l-.4-2.6a8 8 0 0 1-3-1.7l-2.4 1-2-3.4 2-1.6a8 8 0 0 1 0-3.6l-2-1.6 2-3.4 2.4 1a8 8 0 0 1 3-1.7L8 4h4l.4 2.5a8 8 0 0 1 3 1.8l2.4-1 2 3.4-2 1.6a8 8 0 0 1 .2 1.7Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+		</div>
+		<div class="intro-body">
+			<div class="intro-top">
 				<div>
 					<h2>Base URL & authentication</h2>
 					<p>
-						All endpoints are mounted at <code>{data.baseUrl}/api/…</code>. Send authenticated requests with the
-						<code>session</code> cookie issued by <code>/login</code>. There is no API-key login — the cookie is
-						the only authenticator.
+						All endpoints live at <code>{data.baseUrl}/api/…</code>. Authenticate with the
+						<code>session</code> cookie minted by <code>/login</code> — there is no API-key login.
 					</p>
-					<pre class="code-block"><code>{exampleRequest}</code></pre>
+				</div>
+				<div class="intro-actions">
+					<a class="badge-link" href={data.jsonPath} target="_blank" rel="noopener">
+						<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m8 7 5-5 5 5M13 2v14M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+						<span>JSON</span>
+					</a>
+					<button
+						type="button"
+						class="copy-btn"
+						class:copied={copyState === 'copied'}
+						class:errored={copyState === 'error'}
+						onclick={copyJsonUrl}
+						aria-label="Copy JSON reference URL"
+					>
+						{#if copyState === 'copied'}
+							<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 12 4 4 10-10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+							Copied
+						{:else if copyState === 'error'}
+							<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7"/><path d="M12 8v5m0 3h.01" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+							Press ⌘/Ctrl+C
+						{:else}
+							<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+							Copy URL
+						{/if}
+					</button>
 				</div>
 			</div>
-
-			{#each data.sections as section (section.id)}
-				<section id={section.id} class="section card">
-					<header class="section-head">
-						<h2>{section.title}</h2>
-						<p>{section.tagline}</p>
-					</header>
-					<div class="endpoints">
-						{#each section.endpoints as endpoint (endpoint.id)}
-							<article id={`${section.id}-${endpoint.id}`} class="endpoint">
-								<header class="endpoint-head">
-									<h3>
-										<span class={methodClass(endpoint.method)}>{endpoint.method}</span>
-										<code class="path">{endpoint.path}</code>
-									</h3>
-									<span class="auth-tag" data-level={endpoint.auth}>{authLabel(endpoint.auth)}</span>
-								</header>
-								<p class="summary">{endpoint.summary}</p>
-								<p class="description">{endpoint.description}</p>
-
-								{#if endpoint.requestFields?.length}
-									<h4>Request</h4>
-									<div class="fields">
-										<div class="fields-head">
-											<span>Field</span>
-											<span>Type</span>
-											<span>Notes</span>
-										</div>
-										{#each endpoint.requestFields as field (field.name)}
-											<div class="field-row">
-												<div class="field-name">
-													<code>{field.name}</code>
-													{#if field.required}<span class="req">required</span>{/if}
-												</div>
-												<div class="field-type">
-													{#if field.values && field.values.length}
-														<span class="enum">{field.type}</span>
-														<ul class="enum-values">
-															{#each field.values as v (v)}<li>{v}</li>{/each}
-														</ul>
-													{:else}
-														{field.type}
-													{/if}
-												</div>
-												<div class="field-desc">{field.description}</div>
-											</div>
-										{/each}
-									</div>
-								{/if}
-
-								{#if endpoint.responseExample}
-									<h4>Response</h4>
-									<pre class="code-block"><code>{endpoint.responseExample}</code></pre>
-								{/if}
-
-								{#if endpoint.notes}
-									<p class="notes">{endpoint.notes}</p>
-								{/if}
-							</article>
-						{/each}
-					</div>
-				</section>
-			{/each}
-
-			<footer class="page-foot card">
-				<div>
-					<h2>Need something else?</h2>
-					<p>
-						The <a href={data.jsonPath}>{data.jsonPath}</a> endpoint reflects the same catalog. Regenerate your client SDK
-						against it and you'll never drift from the docs.
-					</p>
-				</div>
-			</footer>
+			<details class="snippet">
+				<summary>
+					<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+					Show a working curl example
+				</summary>
+				<pre class="code-block"><code>{exampleRequest}</code></pre>
+			</details>
 		</div>
 	</div>
+
+	<div class="tabs" role="tablist" aria-label="API sections">
+		{#each data.sections as section, index (section.id)}
+			<button
+				type="button"
+				role="tab"
+				id={`tab-${section.id}`}
+				aria-selected={activeSectionId === section.id}
+				aria-controls={`panel-${section.id}`}
+				tabindex={activeSectionId === section.id ? 0 : -1}
+				class="tab"
+				class:active={activeSectionId === section.id}
+				onclick={() => selectSection(section.id)}
+			>
+				<span class="tab-title">{section.title}</span>
+				<span class="tab-count">{section.endpoints.length}</span>
+			</button>
+		{/each}
+	</div>
+
+	{#if activeSection}
+			<div
+				id={`panel-${activeSection.id}`}
+				role="tabpanel"
+				aria-labelledby={`tab-${activeSection.id}`}
+				class="panel"
+			>
+			<header class="panel-head">
+				<p class="panel-tag">Section {activeIndex + 1} of {data.sections.length}</p>
+				<h2>{activeSection.title}</h2>
+				<p class="panel-tagline">{activeSection.tagline}</p>
+			</header>
+			<div class="endpoints">
+				{#each activeSection.endpoints as endpoint (endpoint.id)}
+					<article class="endpoint">
+						<header class="endpoint-head">
+							<h3>
+								<span class={methodClass(endpoint.method)}>{endpoint.method}</span>
+								<code class="path">{endpoint.path}</code>
+							</h3>
+							<span class="auth-tag" data-level={endpoint.auth}>{authLabel(endpoint.auth)}</span>
+						</header>
+						<p class="summary">{endpoint.summary}</p>
+						<p class="description">{endpoint.description}</p>
+
+						{#if endpoint.requestFields?.length}
+							<h4>Request</h4>
+							<div class="fields">
+								<div class="fields-head">
+									<span>Field</span>
+									<span>Type</span>
+									<span>Notes</span>
+								</div>
+								{#each endpoint.requestFields as field (field.name)}
+									<div class="field-row">
+										<div class="field-name">
+											<code>{field.name}</code>
+											{#if field.required}<span class="req">required</span>{/if}
+										</div>
+										<div class="field-type">
+											{#if field.values && field.values.length}
+												<span class="enum">{field.type}</span>
+												<ul class="enum-values">
+													{#each field.values as v (v)}<li>{v}</li>{/each}
+												</ul>
+											{:else}
+												{field.type}
+											{/if}
+										</div>
+										<div class="field-desc">{field.description}</div>
+									</div>
+								{/each}
+							</div>
+						{/if}
+
+						{#if endpoint.responseExample}
+							<h4>Response</h4>
+							<pre class="code-block"><code>{endpoint.responseExample}</code></pre>
+						{/if}
+
+						{#if endpoint.notes}
+							<p class="notes">{endpoint.notes}</p>
+						{/if}
+					</article>
+				{/each}
+			</div>
+			<nav class="panel-nav" aria-label="Section navigation">
+				<button
+					type="button"
+					class="pager"
+					disabled={activeIndex === 0}
+					onclick={() => selectSection(data.sections[activeIndex - 1].id)}
+				>
+					<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m15 18-6-6 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+					<span>
+						<small>Previous</small>
+						<strong>{activeIndex > 0 ? data.sections[activeIndex - 1].title : '—'}</strong>
+					</span>
+				</button>
+				<button
+					type="button"
+					class="pager next"
+					disabled={activeIndex === data.sections.length - 1}
+					onclick={() => selectSection(data.sections[activeIndex + 1].id)}
+				>
+					<span>
+						<small>Next</small>
+						<strong>{activeIndex < data.sections.length - 1 ? data.sections[activeIndex + 1].title : '—'}</strong>
+					</span>
+					<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m9 18 6-6-6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+				</button>
+			</nav>
+					</div>
+				{/if}
 </section>
 
 <style>
 	.page {
-		width: min(100%, 1240px);
+		width: min(100%, 980px);
 		margin: 0 auto;
 		padding: var(--space-6);
 	}
 	.page-head {
-		margin-bottom: var(--space-6);
+		margin-bottom: var(--space-5);
 	}
 	.eyebrow {
 		margin: 0 0 6px;
@@ -268,29 +278,73 @@
 	}
 	.page-head h1 {
 		margin: 0;
-		font-size: clamp(28px, 3.4vw, 38px);
+		font-size: clamp(26px, 3.2vw, 34px);
 		font-weight: 600;
 		letter-spacing: -0.025em;
 	}
 	.subtitle {
-		max-width: 760px;
-		margin: 8px 0 0;
+		max-width: 640px;
+		margin: 6px 0 0;
 		color: var(--text-muted);
-		font-size: 14px;
+		font-size: 13px;
 		line-height: 1.6;
 	}
-	.meta-row {
-		margin-top: var(--space-5);
+
+	.intro {
+		display: grid;
+		grid-template-columns: 44px minmax(0, 1fr);
+		gap: var(--space-4);
+		padding: var(--space-5);
+		margin-bottom: var(--space-5);
+	}
+	.intro-icon {
+		width: 44px;
+		height: 44px;
+		display: grid;
+		place-items: center;
+		border-radius: var(--radius-lg);
+		background: var(--accent-subtle);
+		color: var(--accent);
+	}
+	.intro-icon svg {
+		width: 22px;
+		height: 22px;
+	}
+	.intro-top {
 		display: flex;
-		flex-wrap: wrap;
-		gap: var(--space-3);
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: var(--space-4);
+	}
+	.intro h2 {
+		margin: 0;
+		font-size: 15px;
+		font-weight: 600;
+	}
+	.intro p {
+		margin: 5px 0 0;
+		color: var(--text-secondary);
+		font-size: 13px;
+		line-height: 1.6;
+	}
+	.intro code {
+		padding: 1px 6px;
+		border-radius: 4px;
+		background: var(--bg-elevated);
+		color: var(--accent);
+		font-size: 12px;
+	}
+	.intro-actions {
+		display: inline-flex;
+		flex: none;
+		gap: 7px;
 	}
 	.badge-link,
 	.copy-btn {
 		display: inline-flex;
 		align-items: center;
-		gap: 9px;
-		padding: 8px 13px;
+		gap: 7px;
+		padding: 7px 11px;
 		border: 1px solid var(--border);
 		border-radius: var(--radius-md);
 		background: var(--bg-card);
@@ -310,15 +364,8 @@
 	}
 	.badge-link svg,
 	.copy-btn svg {
-		width: 14px;
-		height: 14px;
-	}
-	.badge-link code {
-		padding: 2px 6px;
-		border-radius: 999px;
-		background: var(--bg-elevated);
-		color: var(--accent);
-		font-size: 11px;
+		width: 13px;
+		height: 13px;
 	}
 	.copy-btn.copied {
 		border-color: rgba(80, 200, 120, 0.4);
@@ -329,116 +376,47 @@
 		color: #ff9b9b;
 	}
 
-	.layout {
-		display: grid;
-		grid-template-columns: 220px minmax(0, 1fr);
-		gap: var(--space-6);
-		align-items: start;
-	}
-
-	.toc {
-		position: sticky;
-		top: calc(var(--header-height) + var(--space-6));
-		padding: var(--space-4);
-	}
-	.toc-title {
-		margin: 0 0 var(--space-3);
-		padding: 0 4px;
-		color: var(--text-muted);
-		font-size: 10px;
-		font-weight: 700;
-		letter-spacing: 0.12em;
-		text-transform: uppercase;
-	}
-	.toc nav {
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
-	}
-	.toc-link {
-		display: inline-flex;
-		align-items: center;
-		gap: 9px;
-		padding: 7px 9px;
-		border-radius: var(--radius-md);
-		color: var(--text-secondary);
-		font-size: 13px;
-		transition: all var(--transition-fast);
-	}
-	.toc-link:hover {
-		background: var(--accent-subtle);
-		color: var(--text-primary);
-	}
-	.toc-link.active {
-		background: var(--accent-subtle);
-		color: var(--accent);
-	}
-	.toc-link .dot {
-		width: 6px;
-		height: 6px;
-		flex: none;
-		border-radius: 50%;
-		background: var(--border-hover);
-		transition: background var(--transition-fast);
-	}
-	.toc-link.active .dot {
-		background: var(--accent);
-	}
-
-	.content {
-		display: grid;
-		gap: var(--space-5);
-		min-width: 0;
-	}
-
-	.callout {
-		display: grid;
-		grid-template-columns: 44px minmax(0, 1fr);
-		gap: var(--space-4);
-		padding: var(--space-5);
-	}
-	.callout-icon {
-		width: 44px;
-		height: 44px;
-		display: grid;
-		place-items: center;
-		border-radius: var(--radius-lg);
-		background: var(--accent-subtle);
-		color: var(--accent);
-	}
-	.callout-icon svg {
-		width: 24px;
-		height: 24px;
-	}
-	.callout h2 {
-		margin: 0;
-		font-size: 16px;
-		font-weight: 600;
-	}
-	.callout p {
-		margin: 6px 0 0;
-		color: var(--text-secondary);
-		font-size: 13px;
-		line-height: 1.65;
-	}
-	.callout code {
-		padding: 1px 6px;
-		border-radius: 4px;
-		background: var(--bg-elevated);
-		color: var(--accent);
-		font-size: 12px;
-	}
-
-	.code-block {
-		margin: var(--space-4) 0 0;
-		padding: 14px 16px;
+	.snippet {
+		margin-top: var(--space-4);
 		border: 1px solid var(--border);
 		border-radius: var(--radius-md);
+		background: var(--bg-secondary);
+		overflow: hidden;
+	}
+	.snippet summary {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		padding: 9px 13px;
+		cursor: pointer;
+		list-style: none;
+		color: var(--text-secondary);
+		font-size: 12px;
+		font-weight: 500;
+	}
+	.snippet summary::-webkit-details-marker {
+		display: none;
+	}
+	.snippet summary svg {
+		width: 13px;
+		height: 13px;
+		transition: transform var(--transition-fast);
+	}
+	.snippet[open] summary svg {
+		transform: rotate(180deg);
+	}
+	.snippet summary:hover {
+		color: var(--accent);
+	}
+	.code-block {
+		margin: 0;
+		padding: 13px 15px;
+		border-top: 1px solid var(--border);
 		background: var(--bg-primary);
 		color: var(--text-secondary);
 		font-family:
 			'SF Mono', Monaco, Menlo, Consolas, 'Liberation Mono', monospace;
-		font-size: 12px;
+		font-size: 11px;
 		line-height: 1.65;
 		overflow-x: auto;
 		white-space: pre;
@@ -449,24 +427,85 @@
 		color: inherit;
 	}
 
-	.section {
-		padding: var(--space-5);
+	.tabs {
+		display: flex;
+		flex-wrap: nowrap;
+		gap: 4px;
+		padding: 4px;
+		margin-bottom: var(--space-5);
+		border: 1px solid var(--border);
+		border-radius: var(--radius-lg);
+		background: var(--bg-card);
+		overflow-x: auto;
+		scrollbar-width: none;
 	}
-	.section-head {
-		margin-bottom: var(--space-4);
+	.tabs::-webkit-scrollbar {
+		display: none;
+	}
+	.tab {
+		flex: 1;
+		min-width: max-content;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 8px;
+		padding: 9px 13px;
+		border-radius: var(--radius-md);
+		color: var(--text-secondary);
+		font-size: 12px;
+		font-weight: 500;
+		white-space: nowrap;
+		transition: all var(--transition-fast);
+	}
+	.tab:hover {
+		background: var(--bg-elevated);
+		color: var(--text-primary);
+	}
+	.tab.active {
+		background: var(--accent);
+		color: white;
+		box-shadow: var(--shadow-glow);
+	}
+	.tab-count {
+		min-width: 18px;
+		padding: 1px 6px;
+		border-radius: 999px;
+		background: rgba(255, 255, 255, 0.08);
+		color: inherit;
+		font-size: 10px;
+		font-weight: 700;
+		text-align: center;
+	}
+	.tab.active .tab-count {
+		background: rgba(0, 0, 0, 0.2);
+	}
+
+	.panel {
+		display: grid;
+		gap: var(--space-4);
+	}
+	.panel-head {
 		padding-bottom: var(--space-4);
 		border-bottom: 1px solid var(--border);
 	}
-	.section-head h2 {
+	.panel-tag {
 		margin: 0;
-		font-size: 17px;
-		font-weight: 600;
-		letter-spacing: -0.01em;
+		color: var(--accent);
+		font-size: 10px;
+		font-weight: 700;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
 	}
-	.section-head p {
+	.panel-head h2 {
+		margin: 4px 0 0;
+		font-size: 20px;
+		font-weight: 600;
+		letter-spacing: -0.015em;
+	}
+	.panel-tagline {
 		margin: 4px 0 0;
 		color: var(--text-muted);
-		font-size: 12px;
+		font-size: 13px;
 	}
 
 	.endpoints {
@@ -477,10 +516,7 @@
 		padding: var(--space-4);
 		border: 1px solid var(--border);
 		border-radius: var(--radius-md);
-		background: var(--bg-secondary);
-	}
-	.endpoint:hover {
-		border-color: var(--border-hover);
+		background: var(--bg-card);
 	}
 	.endpoint-head {
 		display: flex;
@@ -618,7 +654,7 @@
 		border-radius: var(--radius-md);
 	}
 	.field-row:hover {
-		background: var(--bg-card);
+		background: var(--bg-secondary);
 	}
 	.field-name code {
 		padding: 1px 6px;
@@ -673,59 +709,84 @@
 		line-height: 1.55;
 	}
 
-	.page-foot {
-		padding: var(--space-5);
+	.panel-nav {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: var(--space-3);
+		margin-top: var(--space-3);
 	}
-	.page-foot h2 {
-		margin: 0;
-		font-size: 16px;
-		font-weight: 600;
-	}
-	.page-foot p {
-		margin: 4px 0 0;
+	.pager {
+		display: inline-flex;
+		align-items: center;
+		gap: 9px;
+		padding: 12px 14px;
+		border: 1px solid var(--border);
+		border-radius: var(--radius-md);
+		background: var(--bg-card);
 		color: var(--text-secondary);
+		font-size: 12px;
+		text-align: left;
+		cursor: pointer;
+		transition: all var(--transition-fast);
+	}
+	.pager svg {
+		width: 16px;
+		height: 16px;
+		flex: none;
+	}
+	.pager span {
+		display: grid;
+		gap: 2px;
+		min-width: 0;
+	}
+	.pager small {
+		color: var(--text-muted);
+		font-size: 10px;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+	}
+	.pager strong {
+		color: var(--text-primary);
 		font-size: 13px;
-	}
-	.page-foot a {
-		color: var(--accent);
 		font-weight: 500;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.pager.next {
+		justify-content: flex-end;
+		text-align: right;
+	}
+	.pager:hover:not(:disabled) {
+		border-color: var(--border-hover);
+		color: var(--accent);
+	}
+	.pager:disabled {
+		opacity: 0.4;
+		cursor: not-allowed;
 	}
 
-	@media (max-width: 980px) {
-		.layout {
-			grid-template-columns: 1fr;
-		}
-		.toc {
-			position: static;
-		}
-		.toc nav {
-			flex-direction: row;
-			overflow-x: auto;
-			gap: 6px;
-			padding-bottom: 4px;
-		}
-		.toc-link {
-			white-space: nowrap;
-		}
-		.fields-head,
-		.field-row {
-			grid-template-columns: 1.2fr 1fr 2fr;
-		}
-	}
-
-	@media (max-width: 680px) {
+	@media (max-width: 720px) {
 		.page {
 			padding: var(--space-4);
 		}
-		.callout {
+		.intro {
 			grid-template-columns: 1fr;
 			padding: var(--space-4);
 		}
-		.section {
-			padding: var(--space-4);
+		.intro-top {
+			flex-direction: column;
 		}
-		.endpoint {
-			padding: var(--space-3);
+		.intro-actions {
+			width: 100%;
+		}
+		.badge-link,
+		.copy-btn {
+			flex: 1;
+			justify-content: center;
+		}
+		.tab {
+			padding: 8px 10px;
 		}
 		.fields-head {
 			display: none;
@@ -734,9 +795,11 @@
 			grid-template-columns: 1fr;
 			gap: 4px;
 		}
-		.code-block {
-			padding: 12px;
-			font-size: 11px;
+		.panel-nav {
+			grid-template-columns: 1fr;
+		}
+		.endpoint {
+			padding: var(--space-3);
 		}
 	}
 </style>
