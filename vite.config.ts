@@ -39,10 +39,11 @@ function injectEmailHandler(): Plugin {
 
 			// Read the inbound module(s). We need both inbound.js (pipeline)
 						// and db/queries.js (its only dependency).
-						const sources = [
-							readFileSync('src/lib/server/mail/inbound.js', 'utf-8'),
-							readFileSync('src/lib/server/db/queries.js', 'utf-8')
-						];
+			const sources = [
+				readFileSync('src/lib/server/mail/inbound.js', 'utf-8'),
+				readFileSync('src/lib/server/db/storage.js', 'utf-8'),
+				readFileSync('src/lib/server/db/queries.js', 'utf-8')
+			];
 
 			const stripImports = (s: string) =>
 				s
