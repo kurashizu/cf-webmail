@@ -68,9 +68,6 @@
 			</a>
 			<div class="me">
 				<span class="email">{data.user.email}</span>
-				<form method="POST" action="/logout">
-					<button type="submit" class="btn btn-ghost">Sign out</button>
-				</form>
 			</div>
 			<button
 				type="button"
@@ -499,10 +496,6 @@
 		}
 
 		.email {
-			display: none;
-		}
-
-		.me .btn {
 			display: none;
 		}
 
