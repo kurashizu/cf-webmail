@@ -43,7 +43,8 @@
 	function formatMB(bytes: number) { return `${(bytes / 1024 / 1024).toFixed(1)} MB`; }
 
 	async function refreshInbox(manual = false) {
-		if (refreshing || document.visibilityState !== 'visible') return;
+		if (refreshing) return;
+		if (!manual && document.visibilityState !== 'visible') return;
 		refreshing = true;
 		if (manual) actionError = '';
 		try {
