@@ -1,17 +1,20 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
-	import { onMount } from 'svelte';
-	let { data, form } = $props();
-	let fileInput: HTMLInputElement;
-	let files = $state<File[]>([]);
-	let sending = $state(false);
-	let dragActive = $state(false);
+import { enhance } from '$app/forms';
+import { beforeNavigate } from '$app/navigation';
+import { onMount } from 'svelte';
+import { toastStore } from '$lib/toast';
+let { data, form } = $props();
+let fileInput: HTMLInputElement;
+let files = $state<File[]>([]);
+let sending = $state(false);
+let dragActive = $state(false);
+let dirty = $state(false);
 
-	let storage = $state<{ used_bytes: number; quota_bytes: number; message_count: number; quota_messages: number } | null>(null);
+let storage = $state<{ used_bytes: number; quota_bytes: number; message_count: number; quota_messages: number } | null>(null);
 
-	const totalSize = $derived(files.reduce((total, file) => total + file.size, 0));
+const totalSize = $derived(files.reduce((total, file) => total + file.size, 0));
 
-	const projectedUsage = $derived.by(() => {
+const projectedUsage = $derived.by(() => {
 		if (!storage) return null;
 		const projectedBytes = Number(storage.used_bytes || 0) + totalSize;
 		const projectedMessages = Number(storage.message_count || 0) + 1;
@@ -22,7 +25,7 @@
 		return { projectedBytes, projectedMessages, overBytes, overMessages };
 	});
 
-	onMount(async () => {
+onMount(async () => {
 		try {
 			const response = await fetch('/api/storage', { headers: { accept: 'application/json' } });
 			if (response.ok) storage = await response.json();
@@ -31,7 +34,7 @@
 		}
 	});
 
-	function chooseFiles(selected: FileList | null) {
+function chooseFiles(selected: FileList | null) {
 		if (!selected) return;
 		const next = [...files];
 		for (const file of Array.from(selected)) {
@@ -42,24 +45,24 @@
 		syncInput();
 	}
 
-	function removeFile(index: number) {
+function removeFile(index: number) {
 		files = files.filter((_, itemIndex) => itemIndex !== index);
 		syncInput();
 	}
 
-	function syncInput() {
+function syncInput() {
 		if (!fileInput) return;
 		const transfer = new DataTransfer();
 		for (const file of files) transfer.items.add(file);
 		fileInput.files = transfer.files;
 	}
 
-	function formatSize(bytes: number) {
+function formatSize(bytes: number) {
 		if (bytes < 1024) return `${bytes} B`;
 		if (bytes < 1024 * 1024) return `${Math.ceil(bytes / 1024)} KB`;
 		return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 	}
-	function formatMB(bytes: number) {
+function formatMB(bytes: number) {
 		return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 	}
 </script>
@@ -89,11 +92,18 @@
 	{/if}
 
 	<form method="POST" action="?/send" enctype="multipart/form-data" class="composer" use:enhance={() => {
-		sending = true;
-		return async ({ update }) => {
-			await update();
-			sending = false;
-		};
+				sending = true;
+				return async ({ update, result }) => {
+					await update();
+					sending = false;
+					if (result.type === 'success' || result.type === 'redirect') {
+						toastStore.success('Message sent!');
+						dirty = false;
+					} else if (result.type === 'failure') {
+						const data = result.data as { error?: string } | null;
+						if (data?.error) toastStore.error(data.error);
+					}
+				};
 	}}>
 		<div class="address-fields">
 			<label class="field inline"><span>From</span><input type="text" value={data.user.email} disabled /></label>
@@ -180,16 +190,16 @@
 	.attachments strong { overflow: hidden; font-size: 12px; font-weight: 550; text-overflow: ellipsis; white-space: nowrap; }
 	.attachments span { color: var(--text-muted); font-size: 10px; }
 	.attachments button { width: 28px; height: 28px; border-radius: 50%; color: var(--text-muted); font-size: 18px; }
-	.attachments button:hover { background: rgba(255,80,80,.1); color: #ff9696; }
+	.attachments button:hover { background: var(--color-danger-subtle); color: var(--color-danger); }
 	.notice { margin: 0 var(--space-5) var(--space-4); padding: 10px 12px; border-radius: var(--radius-md); font-size: 12px; }
-		.notice.error { border: 1px solid rgba(255,80,80,.3); background: rgba(255,80,80,.08); color: #ff9b9b; }
-		.quota-warn { display: flex; align-items: flex-start; gap: 10px; margin: 0 0 var(--space-4); border: 1px solid rgba(245,165,36,.3); background: rgba(245,165,36,.08); color: #f5c97b; }
+		.notice.error { border: 1px solid var(--color-danger-border); background: var(--color-danger-bg); color: var(--color-danger); }
+			.quota-warn { display: flex; align-items: flex-start; gap: 10px; margin: 0 0 var(--space-4); border: 1px solid var(--color-warning-border); background: var(--color-warning-bg); color: var(--color-warning); }
 		.quota-warn svg { width: 18px; height: 18px; flex: none; }
 		.quota-warn strong { display: block; font-size: 12px; }
 		.quota-warn span { display: block; margin-top: 3px; font-size: 11px; line-height: 1.5; }
 	.composer-footer { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: var(--space-3) var(--space-5); border-top: 1px solid var(--border); background: var(--bg-card); }
 	.composer-footer > span { color: var(--text-muted); font-size: 10px; }
-	.over-limit { color: #ff8888 !important; }
+	.over-limit { color: var(--color-danger) !important; }
 	.send { padding: 10px 17px; }
 	.send svg { width: 17px; height: 17px; }
 	.send:disabled { opacity: .55; cursor: wait; }

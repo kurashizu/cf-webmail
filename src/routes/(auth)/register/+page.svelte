@@ -111,13 +111,13 @@
 	}
 	.submit { justify-content: center; padding: var(--space-3); font-weight: 600; margin-top: var(--space-2); }
 	.error {
-		padding: var(--space-3);
-		border-radius: var(--radius-md);
-		background: rgba(255, 80, 80, 0.1);
-		border: 1px solid rgba(255, 80, 80, 0.3);
-		color: #ff8888;
-		font-size: 13px;
-	}
+			padding: var(--space-3);
+			border-radius: var(--radius-md);
+			background: var(--color-danger-subtle);
+			border: 1px solid var(--color-danger-border);
+			color: var(--color-danger);
+			font-size: 13px;
+		}
 	.hint { text-align: center; font-size: 13px; color: var(--text-muted); margin: 0; }
 	.hint a { color: var(--accent); }
 </style>

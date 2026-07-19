@@ -157,7 +157,7 @@
 	.indicators { display: flex; align-items: center; gap: 8px; color: var(--text-muted); }
 	.indicators svg { width: 15px; height: 15px; }
 	.folder-tag { padding: 3px 7px; border: 1px solid var(--border); border-radius: var(--radius-full); font-size: 9px; letter-spacing: .05em; text-transform: uppercase; }
-	.star { color: var(--accent); }
+	.star { color: var(--color-star); }
 	@media (max-width: 760px) {
 		.page { padding: var(--space-3) 10px calc(72px + var(--space-3) + env(safe-area-inset-bottom, 0px)); }
 		.filters { grid-template-columns: 1fr 1fr; }

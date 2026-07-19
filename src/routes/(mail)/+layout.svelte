@@ -1,20 +1,27 @@
+
+
 <script lang="ts">
 	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
+	import Toast from '$lib/components/Toast.svelte';
+	import { registerMailShortcuts } from '$lib/shortcuts';
 
 	let { data, children } = $props();
 
 	let searchQuery = $derived(page.url.pathname === '/search' ? page.url.searchParams.get('q') || '' : '');
 	let mobileMenuOpen = $state(false);
+	let transitioning = $state(false);
 
 	const PRIMARY_FOLDERS = new Set(['INBOX', 'Starred', 'Sent']);
 	const PRIMARY_ICONS: Record<string, string> = {
-		INBOX: 'inbox',
-		Starred: 'star',
-		Sent: 'send',
-		Drafts: 'file',
-		Junk: 'alert',
-		Trash: 'trash'
-	};
+			INBOX: 'inbox',
+			Starred: 'star',
+			Sent: 'send',
+			Drafts: 'file',
+			Junk: 'alert',
+			Trash: 'trash'
+		};
 
 	function folderHref(name: string) {
 		const slug = name.toLowerCase();
@@ -44,10 +51,82 @@
 		// Close the more sheet on navigation
 		void data.currentPath;
 		mobileMenuOpen = false;
+		// Brief page-transition flash
+		transitioning = true;
+		const timer = setTimeout(() => { transitioning = false; }, 200);
+		return () => clearTimeout(timer);
+	});
+
+	let searchInputEl: HTMLInputElement | undefined = $state();
+
+	// Inbox-level scroll position preservation: stash when leaving a list
+	function preserveScroll() {
+		const main = document.querySelector('.main');
+		if (main) {
+			sessionStorage.setItem('mail-scroll-pos', String(main.scrollTop));
+		}
+	}
+
+	function restoreScroll() {
+		const saved = sessionStorage.getItem('mail-scroll-pos');
+		if (saved) {
+			const main = document.querySelector('.main');
+			if (main) {
+				requestAnimationFrame(() => { main.scrollTop = parseInt(saved, 10); });
+			}
+			sessionStorage.removeItem('mail-scroll-pos');
+		}
+	}
+
+	onMount(() => {
+		// Restore scroll on back-navigation
+		navigation.addEventListener('navigate', (e: Event) => {
+			const navEvent = e as NavigateEvent;
+			if (navEvent.navigationType === 'traverse') {
+				setTimeout(restoreScroll, 50);
+			}
+		});
+	});
+
+	onMount(() => {
+		const cleanup = registerMailShortcuts({
+			search: () => {
+				const path = page.url.pathname;
+				if (path.startsWith('/search')) {
+					// Focus the search field
+					document.querySelector<HTMLInputElement>('.page-search input')?.focus();
+				}
+				goto('/search');
+			},
+			compose: () => { goto('/compose'); },
+			reply: () => {
+				const replyLink = document.querySelector<HTMLAnchorElement>('a[href^="/compose?to="]');
+				if (replyLink) replyLink.click();
+			},
+			markUnread: () => {
+				document.querySelector<HTMLButtonElement>('button[title="Mark unread"]')?.click();
+			},
+			star: () => {
+				document.querySelector<HTMLButtonElement>('button[title*="Star"]')?.click();
+			},
+			trash: () => {
+				document.querySelector<HTMLButtonElement>('button[title="Move to Trash"]')?.click();
+			},
+			archive: () => {
+				document.querySelector<HTMLButtonElement>('button[title="Archive"]')?.click();
+			},
+			inbox: () => { goto('/inbox'); },
+			close: () => {
+				const backLink = document.querySelector<HTMLAnchorElement>('a.back[href]');
+				if (backLink) backLink.click();
+			}
+		});
+		return cleanup;
 	});
 </script>
 
-<div class="app" class:menu-open={mobileMenuOpen}>
+<div class="app" class:transitioning class:menu-open={mobileMenuOpen}>
+	<Toast />
 	<header class="topbar">
 		<a href="/inbox" class="brand" aria-label="KRSZ Mail home">
 			<img class="logo-mark" src="/favicon.ico" alt="" width="32" height="32" />
@@ -55,7 +134,7 @@
 		</a>
 		<form class="top-search" action="/search" method="GET" role="search">
 			<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="m16.5 16.5 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-			<input name="q" value={searchQuery} maxlength="100" placeholder="Search mail" aria-label="Search mail" />
+			<input bind:this={searchInputEl} name="q" value={searchQuery} maxlength="100" placeholder="Search mail (Ctrl+K)" aria-label="Search mail (Ctrl+K)" />
 			{#if searchQuery}<a class="clear-search" href="/search" aria-label="Clear search" title="Clear search">×</a>{/if}
 		</form>
 		<div class="actions">
@@ -458,10 +537,19 @@
 		overflow: auto;
 	}
 
-	/* Bottom navigation — hidden on desktop, slides in on mobile */
-	.bottom-nav {
-		display: none;
-	}
+	/* Page transition */
+		.app.transitioning .main {
+			animation: page-fade-in 180ms var(--ease-out);
+		}
+		@keyframes page-fade-in {
+			from { opacity: 0.7; transform: translateY(6px); }
+			to { opacity: 1; transform: translateY(0); }
+		}
+
+		/* Bottom navigation — hidden on desktop, slides in on mobile */
+		.bottom-nav {
+			display: none;
+		}
 
 	.sheet-scrim {
 		display: none;

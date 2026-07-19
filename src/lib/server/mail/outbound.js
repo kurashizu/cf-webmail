@@ -8,8 +8,9 @@ import { assertQuota, addStorageUsed, StorageQuotaError } from '../db/storage.js
 const DEFAULT_DOMAIN = 'krsz.in';
 
 export async function sendOutbound(input, env) {
-	const account = await findAccountById(env.DB, input.accountId);
-	if (!account) return { ok: false, error: 'Account not found', status: 404 };
+	try {
+		const account = await findAccountById(env.DB, input.accountId);
+		if (!account) return { ok: false, error: 'Account not found', status: 404 };
 
 	const to = normaliseList(input.to);
 	if (!to.length) return { ok: false, error: 'At least one recipient required', status: 400 };
@@ -72,23 +73,31 @@ export async function sendOutbound(input, env) {
 	}
 
 	let result = { ok: true, status: 200, body: null };
-	if (externalRecipients.length) {
-		result = await sendEmail(
-			{
-				from: fromAddress,
-				to: externalRecipients,
-				subject: input.subject,
-				text: input.text,
-				html: input.html,
-				replyTo: fromAddress,
-				attachments: attachments.map((attachment) => ({
-					filename: attachment.filename,
-					content: bytesToBase64(attachment.content)
-				}))
-			},
-			env
-		);
-	}
+			if (externalRecipients.length) {
+				try {
+					result = await sendEmail(
+						{
+							from: fromAddress,
+							to: externalRecipients,
+							subject: input.subject,
+							text: input.text,
+							html: input.html,
+							replyTo: fromAddress,
+							attachments: attachments.map((attachment) => ({
+								filename: attachment.filename,
+								content: bytesToBase64(attachment.content)
+							}))
+						},
+						env
+					);
+				} catch (err) {
+					return {
+						ok: false,
+						error: 'Email service temporarily unavailable. Please try again later.',
+						status: 502
+					};
+				}
+			}
 
 	if (!result.ok) {
 			return {
@@ -169,7 +178,11 @@ export async function sendOutbound(input, env) {
 	}
 
 	return { ok: true, messageId };
-}
+		} catch (err) {
+			console.error('[outbound] send failed:', err);
+			return { ok: false, error: 'An unexpected error occurred. Please try again.', status: 500 };
+		}
+	}
 
 async function deliverLocal(input, env) {
 	const folder = 'INBOX';

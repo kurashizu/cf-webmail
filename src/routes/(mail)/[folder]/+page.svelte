@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
-	import { onMount } from 'svelte';
-	import { formatDate, initials } from '$lib/format';
+		import { onMount } from 'svelte';
+		import { formatDate, initials } from '$lib/format';
+		import { toastStore } from '$lib/toast';
 	let { data } = $props();
 	let messages = $state<any[]>([]);
 	let emptying = $state(false);
@@ -56,25 +57,26 @@
 		} catch(error) { actionError = error instanceof Error ? error.message : 'Bulk action failed.'; } finally { bulkBusy = false; }
 	}
 	async function emptyTrash() {
-		if (emptying || messages.length === 0) return;
-		const confirmed = window.confirm(
-			`Permanently delete ${messages.length} ${messages.length === 1 ? 'message' : 'messages'} from Trash? This cannot be undone.`
-		);
-		if (!confirmed) return;
+				if (emptying || messages.length === 0) return;
+				const confirmed = window.confirm(
+					`Permanently delete ${messages.length} ${messages.length === 1 ? 'message' : 'messages'} from Trash? This cannot be undone.`
+				);
+				if (!confirmed) return;
 
-		emptying = true;
-		actionError = '';
-		try {
-			const response = await fetch('/api/trash', { method: 'DELETE' });
-			if (!response.ok) throw new Error();
-			messages = [];
-			await invalidateAll();
-		} catch {
-			actionError = 'Could not empty Trash. Please try again.';
-		} finally {
-			emptying = false;
-		}
-	}
+				emptying = true;
+				actionError = '';
+				try {
+					const response = await fetch('/api/trash', { method: 'DELETE' });
+					if (!response.ok) throw new Error();
+					messages = [];
+					await invalidateAll();
+					toastStore.success('Trash emptied.');
+				} catch {
+					toastStore.error('Could not empty Trash. Please try again.');
+				} finally {
+					emptying = false;
+				}
+			}
 
 	function addressLabel(message: any) {
 		if (message.direction !== 'outbound') return message.fromName || message.fromAddr || 'Unknown sender';
@@ -210,11 +212,11 @@
 	.eyebrow { margin: 0 0 4px; color: var(--accent); font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
 	.page-head h1 { margin: 0; font-size: clamp(25px, 3vw, 34px); font-weight: 600; letter-spacing: -.025em; }
 	.head-actions { display: flex; align-items: center; gap: var(--space-3); }
-	.empty-trash { border-color: rgba(255, 100, 100, .24); color: #ff9a9a; background: rgba(255, 80, 80, .06); }
-	.empty-trash:hover:not(:disabled) { border-color: rgba(255, 100, 100, .42); color: #ffb0b0; background: rgba(255, 80, 80, .12); }
+	.empty-trash { border-color: var(--color-danger-border); color: var(--color-danger); background: var(--color-danger-bg); }
+	.empty-trash:hover:not(:disabled) { border-color: var(--color-danger-border); color: var(--color-danger-bright); background: var(--color-danger-subtle); }
 	.empty-trash:disabled { cursor: wait; opacity: .55; }
 	.empty-trash svg { width: 16px; height: 16px; }
-	.action-error { margin-bottom: var(--space-4); padding: 10px 12px; border: 1px solid rgba(255,80,80,.3); border-radius: var(--radius-md); color: #ff9b9b; background: rgba(255,80,80,.08); font-size: 13px; }
+	.action-error { margin-bottom: var(--space-4); padding: 10px 12px; border: 1px solid var(--color-danger-border); border-radius: var(--radius-md); color: var(--color-danger); background: var(--color-danger-bg); font-size: 13px; }
 	.count { color: var(--text-muted); font-size: 12px; padding-bottom: 5px; }
 	.empty { min-height: 380px; display: grid; place-content: center; justify-items: center; text-align: center; border: 1px dashed var(--border); border-radius: var(--radius-lg); color: var(--text-secondary); padding: var(--space-8); }
 	.empty-icon { display: grid; place-items: center; width: 48px; height: 48px; margin-bottom: var(--space-4); border-radius: 50%; background: var(--accent-subtle); color: var(--accent); font-size: 20px; }
@@ -240,7 +242,7 @@
 	.subject { margin-top: 2px; font-size: 14px; color: var(--text-primary); }
 	.preview { margin-top: 2px; font-size: 12px; color: var(--text-muted); }
 	.indicators { display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 13px; }
-	.star { color: var(--accent); }
+	.star { color: var(--color-star); }
 	@media (max-width: 760px) {
 		.page { padding: var(--space-3) 10px calc(72px + var(--space-3) + env(safe-area-inset-bottom, 0px)); }
 		.row { grid-template-columns: 34px minmax(0, 1fr) auto; padding: 12px 12px 12px 4px; gap: 10px; min-height: 60px; }
@@ -258,8 +260,8 @@
 		.preview { font-size: 11px; }
 	}
 			.storage-banner { display: flex; align-items: center; gap: 12px; margin-bottom: var(--space-4); padding: 11px 14px; border: 1px solid; border-radius: var(--radius-md); font-size: 12px; }
-			.storage-banner[data-level='high'] { border-color: rgba(245,165,36,.3); background: rgba(245,165,36,.08); color: #f5c97b; }
-			.storage-banner[data-level='critical'] { border-color: rgba(255,80,80,.3); background: rgba(255,80,80,.08); color: #ff9b9b; }
+		.storage-banner[data-level='high'] { border-color: var(--color-warning-border); background: var(--color-warning-bg); color: var(--color-warning); }
+		.storage-banner[data-level='critical'] { border-color: var(--color-danger-border); background: var(--color-danger-bg); color: var(--color-danger); }
 			.storage-banner svg { width: 18px; height: 18px; flex: none; }
 			.storage-banner strong { display: block; font-size: 12px; font-weight: 600; }
 			.storage-banner span { display: block; margin-top: 2px; font-size: 11px; opacity: .9; }

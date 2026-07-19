@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
-	import { onMount } from 'svelte';
-	import { formatAddresses, formatDate, initials } from '$lib/format';
+		import { onMount } from 'svelte';
+		import { formatAddresses, formatDate, initials } from '$lib/format';
+		import { toastStore } from '$lib/toast';
 	let { data } = $props();
 
 	let bodyHtml = $state('');
@@ -55,53 +56,56 @@
 	}
 
 	async function toggleStar() {
-		if (actionBusy) return;
-		actionBusy = true;
-		error = null;
-		try {
-			const response = await fetch(`/api/messages/${data.message.id}/star`, { method: 'POST' });
-			if (!response.ok) throw new Error();
-			const result = (await response.json()) as { flags: string[] };
-			starred = result.flags.includes('\\Flagged');
-			await invalidateAll();
-		} catch {
-			error = 'Failed to update the message.';
-		} finally {
-			actionBusy = false;
-		}
-	}
+				if (actionBusy) return;
+				actionBusy = true;
+				error = null;
+				try {
+					const response = await fetch(`/api/messages/${data.message.id}/star`, { method: 'POST' });
+					if (!response.ok) throw new Error();
+					const result = (await response.json()) as { flags: string[] };
+					starred = result.flags.includes('\Flagged');
+					await invalidateAll();
+					toastStore.success(starred ? 'Starred' : 'Unstarred');
+				} catch {
+					toastStore.error('Failed to update the message.');
+				} finally {
+					actionBusy = false;
+				}
+			}
 
 	async function moveTo(folder: string) {
-		if (actionBusy) return;
-		actionBusy = true;
-		error = null;
-		try {
-			const response = await fetch(`/api/messages/${data.message.id}/move`, {
-				method: 'POST',
-				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ folder })
-			});
-			if (!response.ok) throw new Error();
-			location.href = data.folderSlug === 'starred' ? '/starred' : '/inbox';
-		} catch {
-			error = 'Failed to move the message.';
-			actionBusy = false;
-		}
-	}
+				if (actionBusy) return;
+				actionBusy = true;
+				error = null;
+				try {
+					const response = await fetch(`/api/messages/${data.message.id}/move`, {
+						method: 'POST',
+						headers: { 'content-type': 'application/json' },
+						body: JSON.stringify({ folder })
+					});
+					if (!response.ok) throw new Error();
+					toastStore.info(folder === 'Trash' ? 'Moved to Trash' : `Moved to ${folder}`);
+					location.href = data.folderSlug === 'starred' ? '/starred' : '/inbox';
+				} catch {
+					toastStore.error('Failed to move the message.');
+					actionBusy = false;
+				}
+			}
 
 	async function markUnread() {
-		if (actionBusy) return;
-		actionBusy = true;
-		error = null;
-		try {
-			const response = await fetch(`/api/messages/${data.message.id}/read`, { method: 'DELETE' });
-			if (!response.ok) throw new Error();
-			location.href = `/${data.folderSlug}`;
-		} catch {
-			error = 'Failed to update the message.';
-			actionBusy = false;
-		}
-	}
+				if (actionBusy) return;
+				actionBusy = true;
+				error = null;
+				try {
+					const response = await fetch(`/api/messages/${data.message.id}/read`, { method: 'DELETE' });
+					if (!response.ok) throw new Error();
+					toastStore.info('Marked as unread');
+					location.href = `/${data.folderSlug}`;
+				} catch {
+					toastStore.error('Failed to update the message.');
+					actionBusy = false;
+				}
+			}
 
 	onMount(async () => {
 		loadBody();
@@ -184,9 +188,9 @@
 	.tool svg { width: 17px; height: 17px; }
 	.tool:hover:not(:disabled), .tool.active { background: var(--accent-subtle); color: var(--accent); }
 	.tool.primary { background: var(--accent-subtle); color: var(--accent); }
-	.tool.danger:hover:not(:disabled) { background: rgba(255,80,80,.1); color: #ff9292; }
+	.tool.danger:hover:not(:disabled) { background: var(--color-danger-subtle); color: var(--color-danger-bright); }
 	.tool:disabled { opacity: .45; cursor: wait; }
-	.notice { margin-bottom: var(--space-4); padding: 10px 12px; border: 1px solid rgba(255,80,80,.3); border-radius: var(--radius-md); background: rgba(255,80,80,.08); color: #ff9b9b; font-size: 12px; }
+	.notice { margin-bottom: var(--space-4); padding: 10px 12px; border: 1px solid var(--color-danger-border); border-radius: var(--radius-md); background: var(--color-danger-bg); color: var(--color-danger); font-size: 12px; }
 	.message-card { overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg-secondary); box-shadow: var(--shadow-sm); }
 	.message-head { padding: var(--space-6); border-bottom: 1px solid var(--border); }
 	.message-head h1 { margin: 0 0 var(--space-5); font-size: clamp(21px, 3vw, 29px); font-weight: 600; line-height: 1.25; letter-spacing: -.025em; overflow-wrap: anywhere; }

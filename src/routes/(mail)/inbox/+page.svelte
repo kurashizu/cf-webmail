@@ -1,21 +1,23 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { invalidate } from '$app/navigation';
-	import { formatDate, initials } from '$lib/format';
+		import { invalidate } from '$app/navigation';
+		import { formatDate, initials } from '$lib/format';
+		import { toastStore } from '$lib/toast';
 
 	let { data } = $props();
-	let messages = $state<any[]>([]);
-	let busy = $state<Set<string>>(new Set());
-	let actionError = $state('');
-	let refreshing = $state(false);
-	let lastUpdated = $state<Date | null>(null);
-	let newMessageCount = $state(0);
-	let previousIds = new Set<string>();
-	let selected = $state<Set<string>>(new Set());
-	let bulkBusy = $state(false);
-	let selectAllInput = $state<HTMLInputElement | null>(null);
-	let storageDismissed = $state(false);
-	let storage = $state<{ used_bytes: number; quota_bytes: number; message_count: number; quota_messages: number } | null>(null);
+		let messages = $state<any[]>([]);
+		let busy = $state<Set<string>>(new Set());
+		let actionError = $state('');
+		let refreshing = $state(false);
+		let lastUpdated = $state<Date | null>(null);
+		let newMessageCount = $state(0);
+		let previousIds = new Set<string>();
+		let selected = $state<Set<string>>(new Set());
+		let bulkBusy = $state(false);
+		let selectAllInput = $state<HTMLInputElement | null>(null);
+		let storageDismissed = $state(false);
+		let markAllReadBusy = $state(false);
+		let storage = $state<{ used_bytes: number; quota_bytes: number; message_count: number; quota_messages: number } | null>(null);
 	const allSelected = $derived(messages.length > 0 && selected.size === messages.length);
 	const partiallySelected = $derived(selected.size > 0 && selected.size < messages.length);
 
@@ -31,6 +33,29 @@
 		return null;
 	});
 
+	async function markAllRead() {
+		if (markAllReadBusy) return;
+		markAllReadBusy = true;
+		try {
+			const ids = messages.filter((m) => isUnread(m)).map((m) => m.id);
+			if (!ids.length) { toastStore.info('All messages are already read.'); return; }
+			const response = await fetch('/api/messages/bulk', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ ids, action: 'read' })
+			});
+			if (!response.ok) throw new Error();
+			messages = messages.map((m) => ({ ...m, flags: m.flags.includes('\\Seen') ? m.flags : [...m.flags, '\\Seen'] }));
+			selected = new Set();
+			await invalidate('/inbox');
+			toastStore.success(`${ids.length} ${ids.length === 1 ? 'message' : 'messages'} marked as read.`);
+		} catch {
+			toastStore.error('Could not mark all as read. Please try again.');
+		} finally {
+			markAllReadBusy = false;
+		}
+	}
+
 	async function loadStorageSnapshot() {
 		try {
 			const response = await fetch('/api/storage', { headers: { accept: 'application/json' } });
@@ -42,20 +67,30 @@
 
 	function formatMB(bytes: number) { return `${(bytes / 1024 / 1024).toFixed(1)} MB`; }
 
-	async function refreshInbox(manual = false) {
-		if (refreshing) return;
-		if (!manual && document.visibilityState !== 'visible') return;
-		refreshing = true;
-		if (manual) actionError = '';
-		try {
-			await invalidate('/inbox');
-			lastUpdated = new Date();
-		} catch {
-			if (manual) actionError = 'Could not refresh Inbox. Please try again.';
-		} finally {
-			refreshing = false;
+async function refreshInbox(manual = false) {
+			if (refreshing) return;
+			if (!manual && document.visibilityState !== 'visible') return;
+			refreshing = true;
+			if (manual) actionError = '';
+			try {
+				const resp = await fetch('/api/inbox');
+				if (!resp.ok) throw new Error();
+				const fresh = await resp.json() as { messages: any[] };
+				if (fresh && Array.isArray(fresh.messages)) {
+					const incoming = fresh.messages.filter((m: any) => previousIds.size > 0 && !previousIds.has(m.id));
+					if (incoming.length) newMessageCount += incoming.length;
+					previousIds = new Set(fresh.messages.map((m: any) => m.id));
+					messages = fresh.messages.map((m: any) => ({ ...m, flags: [...m.flags] }));
+					selected = new Set();
+				}
+				lastUpdated = new Date();
+				if (manual) toastStore.success('Inbox refreshed');
+			} catch {
+				if (manual) toastStore.error('Could not refresh Inbox. Please try again.');
+			} finally {
+				refreshing = false;
+			}
 		}
-	}
 
 	onMount(() => {
 			lastUpdated = new Date();
@@ -72,14 +107,14 @@
 		});
 
 	$effect(() => {
-		const source = data.messages;
-		const nextMessages = source.map((message: any) => ({ ...message, flags: [...message.flags] }));
-		const incoming = nextMessages.filter((message: any) => previousIds.size > 0 && !previousIds.has(message.id));
-		if (incoming.length) newMessageCount += incoming.length;
-		previousIds = new Set(nextMessages.map((message: any) => message.id));
-		messages = nextMessages;
-		selected = new Set();
-	});
+			const source = data.messages;
+			const nextMessages = source.map((message: any) => ({ ...message, flags: [...message.flags] }));
+			const incoming = nextMessages.filter((message: any) => previousIds.size > 0 && !previousIds.has(message.id));
+			if (incoming.length) newMessageCount += incoming.length;
+			previousIds = new Set(nextMessages.map((message: any) => message.id));
+			messages = nextMessages;
+			selected = new Set();
+		});
 
 	$effect(() => {
 		if (selectAllInput) selectAllInput.indeterminate = partiallySelected;
@@ -165,24 +200,25 @@
 	}
 
 	async function moveToTrash(message: any) {
-		if (busy.has(message.id)) return;
-		setBusy(message.id, true);
-		actionError = '';
-		try {
-			const response = await fetch(`/api/messages/${message.id}/move`, {
-				method: 'POST',
-				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ folder: 'Trash' })
-			});
-			if (!response.ok) throw new Error();
-			messages = messages.filter((item) => item.id !== message.id);
-			await invalidate('/inbox');
-		} catch {
-			actionError = 'Could not move the message to Trash. Please try again.';
-		} finally {
-			setBusy(message.id, false);
+			if (busy.has(message.id)) return;
+			setBusy(message.id, true);
+			actionError = '';
+			try {
+				const response = await fetch(`/api/messages/${message.id}/move`, {
+					method: 'POST',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({ folder: 'Trash' })
+				});
+				if (!response.ok) throw new Error();
+				messages = messages.filter((item) => item.id !== message.id);
+				await invalidate('/inbox');
+				toastStore.info('Moved to Trash');
+			} catch {
+				toastStore.error('Could not move the message to Trash.');
+			} finally {
+				setBusy(message.id, false);
+			}
 		}
-	}
 </script>
 
 <svelte:head><title>Inbox · KRSZ Mail</title></svelte:head>
@@ -199,6 +235,9 @@
 			</div>
 			<button class="refresh" type="button" onclick={() => refreshInbox(true)} disabled={refreshing} aria-label="Refresh Inbox" title="Refresh Inbox">
 				<svg viewBox="0 0 24 24" fill="none"><path d="M20 7v5h-5M4 17v-5h5M18.4 10a7 7 0 0 0-12-3L4 9m16 6-2.4 2a7 7 0 0 1-12-3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+			</button>
+			<button class="mark-all-read" type="button" onclick={markAllRead} disabled={markAllReadBusy} title="Mark all as read" aria-label="Mark all messages as read">
+				<svg viewBox="0 0 24 24" fill="none"><path d="M3 6h18v12H3V6Zm0 1 9 7 9-7" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
 			</button>
 			<span class="count">{messages.length} {messages.length === 1 ? 'message' : 'messages'}</span>
 		</div>
@@ -313,7 +352,11 @@
 		.storage-banner .btn { margin-left: auto; padding: 6px 12px; font-size: 11px; }
 		.storage-banner > button { width: 28px; height: 28px; border: 0; border-radius: 50%; background: transparent; color: inherit; font-size: 18px; opacity: .65; }
 		.storage-banner > button:hover { background: rgba(255,255,255,.06); opacity: 1; }
-	.refresh:disabled { cursor: wait; opacity: .55; }
+	.mark-all-read { width: 32px; height: 32px; display: grid; place-items: center; border-radius: var(--radius-md); color: var(--text-muted); }
+		.mark-all-read:hover:not(:disabled) { background: var(--accent-subtle); color: var(--accent); }
+		.mark-all-read:disabled { cursor: wait; opacity: .55; }
+		.mark-all-read svg { width: 17px; height: 17px; }
+		.refresh:disabled { cursor: wait; opacity: .55; }
 	.refresh svg { width: 17px; height: 17px; }
 	.new-mail { width: 100%; display: flex; align-items: center; gap: 9px; margin-bottom: var(--space-4); padding: 10px 13px; border: 1px solid rgba(255,107,53,.25); border-radius: var(--radius-md); background: var(--accent-subtle); color: var(--accent); font-size: 12px; text-align: left; }
 	.new-mail svg { width: 17px; height: 17px; }
