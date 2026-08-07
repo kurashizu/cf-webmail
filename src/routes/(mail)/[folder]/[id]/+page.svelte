@@ -3,6 +3,7 @@
 		import { onMount } from 'svelte';
 		import { formatAddresses, formatDate, initials } from '$lib/format';
 		import { toastStore } from '$lib/toast';
+		import { themeStore } from '$lib/stores/theme';
 	let { data } = $props();
 
 	let bodyHtml = $state('');
@@ -33,13 +34,19 @@
 		}
 	}
 
-	/** Force the email body onto the dark theme. Parent CSS vars don't cascade
-	 * into a srcdoc iframe, so use literal theme colours. Emails that declare
-	 * their own colours keep them; anything without explicit styling falls onto
-	 * the dark canvas. */
-	function injectBaseStyles(html: string): string {
-		return `<style>:root{color-scheme:dark}html{background:#121216!important;color-scheme:dark}body{background-color:transparent!important}a{color:#ff9b63}</style>${html}`;
+	/** Dark/light wrapper for the email photos. Parent CSS vars don't cascade
+	 * into a srcdoc iframe, so use literal theme colours, re-derived whenever
+	 * the user flips the theme toggle. Emails that declare their own colours
+	 * keep them; anything without explicit styling falls onto the theme canvas. */
+	function injectBaseStyles(html: string, theme: 'dark' | 'light'): string {
+		const canvas = theme === 'light' ? '#ffffff' : '#121216';
+		const link = theme === 'light' ? '#e8581c' : '#ff9b63';
+		return `<style>:root{color-scheme:${theme}}html{background:${canvas}!important;color-scheme:${theme}}body{background-color:transparent!important}a{color:${link}}</style>${html}`;
 	}
+
+	// bodyHtml holds the raw fetched HTML; the iframe srcdoc is re-derived from
+	// it on every theme change so the rendered mail follows the switch.
+	const emailSrcdoc = $derived(bodyHtml ? injectBaseStyles(bodyHtml, $themeStore) : '');
 
 	async function fetchBody(kind: 'html' | 'text') {
 		const has = kind === 'html' ? data.message.hasHtml : data.message.hasText;
@@ -50,7 +57,7 @@
 			if (response.ok) {
 				const result = (await response.json()) as { body?: string };
 				const body = result.body || '';
-				if (kind === 'html') bodyHtml = injectBaseStyles(body);
+				if (kind === 'html') bodyHtml = body;
 				else bodyText = body;
 			}
 		} catch {
@@ -246,7 +253,7 @@
 
 		<section class="body">
 			{#if loading}<div class="skeleton"><span></span><span></span><span></span><span></span></div>
-			{:else if renderMode === 'html' && data.message.hasHtml && bodyHtml}<iframe bind:this={bodyFrame} srcdoc={bodyHtml} title="Message body" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" style:height={`${frameHeight}px`} onload={resizeFrame}></iframe>
+			{:else if renderMode === 'html' && data.message.hasHtml && bodyHtml}<iframe bind:this={bodyFrame} srcdoc={emailSrcdoc} title="Message body" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" style:height={`${frameHeight}px`} onload={resizeFrame}></iframe>
 			{:else if bodyText || data.message.hasText}<pre>{bodyText || ''}</pre>
 			{:else}<p class="empty">This message has no body.</p>{/if}
 		</section>

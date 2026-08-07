@@ -326,6 +326,93 @@ export async function getMessageByMessageId(db, accountId, messageId) {
 }
 
 /**
+ * Get a single draft (Drafts folder) by id.
+ */
+export async function getDraft(db, accountId, id) {
+	return db
+		.prepare('SELECT * FROM messages WHERE account_id = ? AND id = ? AND folder = ?')
+		.bind(accountId, id, 'Drafts')
+		.first();
+}
+
+/**
+ * Insert or update an auto-saved draft. Message body lives in R2 (body_text_key);
+ * this only manages the D1 row. `received_at` is bumped every save so the Drafts
+ * list stays ordered by most-recently-edited. Returns the draft id.
+ */
+export async function upsertDraft(db, accountId, draft) {
+	const now = Date.now();
+	const id = draft.id || uuid();
+	const existing = draft.id ? await getDraft(db, accountId, draft.id) : null;
+	const toJson = JSON.stringify(draft.toAddrs || []);
+	const ccJson = JSON.stringify(draft.ccAddrs || []);
+	const preview = (draft.text || '').replace(/\s+/g, ' ').trim().slice(0, 200);
+	if (existing) {
+		await db
+			.prepare(
+				`UPDATE messages
+				    SET folder = 'Drafts',
+				        to_addrs = ?, cc_addrs = ?, subject = ?, preview = ?,
+				        body_text_key = ?, size = ?, received_at = ?, updated_at = ?,
+				        flags = ?
+				  WHERE account_id = ? AND id = ?`
+			)
+			.bind(
+				toJson,
+				ccJson,
+				draft.subject || '',
+				preview,
+				draft.bodyTextKey || null,
+				draft.text?.length || 0,
+				now,
+				now,
+				JSON.stringify(['\\Seen']),
+				accountId,
+				id
+			)
+			.run();
+	} else {
+		await insertMessage(db, {
+			id,
+			accountId,
+			folder: 'Drafts',
+			direction: 'outbound',
+			messageId: null,
+			inReplyTo: null,
+			threadId: null,
+			fromAddr: null,
+			fromName: null,
+			toAddrs: draft.toAddrs || [],
+			ccAddrs: draft.ccAddrs || [],
+			bccAddrs: [],
+			subject: draft.subject || '',
+			preview,
+			bodyHtmlKey: null,
+			bodyTextKey: draft.bodyTextKey || null,
+			hasAttachments: 0,
+			flags: ['\\Seen'],
+			size: draft.text?.length || 0,
+			receivedAt: now
+		});
+	}
+	return id;
+}
+
+/**
+ * Delete a single draft, returning its R2 body key (if any) so the caller can
+ * purge the blob too.
+ */
+export async function deleteDraft(db, accountId, id) {
+	const row = await getDraft(db, accountId, id);
+	if (!row) return null;
+	await db
+		.prepare('DELETE FROM messages WHERE account_id = ? AND id = ?')
+		.bind(accountId, id)
+		.run();
+	return row.body_text_key;
+}
+
+/**
  * Insert (or ignore) a message. Returns true if a row was inserted.
  */
 export async function insertMessage(db, msg) {

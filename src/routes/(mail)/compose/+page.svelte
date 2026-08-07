@@ -1,7 +1,7 @@
 <script lang="ts">
 import { enhance } from '$app/forms';
 import { beforeNavigate } from '$app/navigation';
-import { onMount } from 'svelte';
+import { onMount, untrack } from 'svelte';
 import { toastStore } from '$lib/toast';
 let { data, form } = $props();
 let fileInput: HTMLInputElement;
@@ -33,6 +33,79 @@ onMount(async () => {
 			/* silent — compose must remain functional even if storage is briefly unavailable */
 		}
 	});
+
+	/* ---- Real-time draft autosave ---- */
+	// Capture the SSR prefill once (intentionally not reactive).
+	const initPrefill = untrack(() => data.prefill);
+	const initDraftId = untrack(() => data.draftId || '');
+	const initTo = initPrefill.to;
+	const initCc = initPrefill.cc || '';
+	const initSubject = initPrefill.subject;
+	const initText = initPrefill.text || '';
+	let to = $state(initTo);
+	let cc = $state(initCc);
+	let subject = $state(initSubject);
+	let text = $state(initText);
+	let draftId = $state(initDraftId);
+	let draftStatus = $state<'idle' | 'saving' | 'saved' | 'error'>('idle');
+	// Seed with the initial snapshot so a freshly-opened compose isn't saved
+	// (and an existing draft isn't rewritten) until the user actually types.
+	let lastSaved = $state(
+		JSON.stringify({ to: initTo.trim(), cc: initCc.trim(), subject: initSubject.trim(), text: initText })
+	);
+	let draftTimer: ReturnType<typeof setTimeout> | null = null;
+	let sent = $state(false);
+
+	const draftSnapshot = $derived(
+		JSON.stringify({ to: to.trim(), cc: cc.trim(), subject: subject.trim(), text })
+	);
+
+	$effect(() => {
+		void draftSnapshot;
+		if (draftSnapshot !== lastSaved) dirty = true;
+		if (draftTimer) clearTimeout(draftTimer);
+		draftTimer = setTimeout(saveDraft, 800);
+		return () => {
+			if (draftTimer) clearTimeout(draftTimer);
+		};
+	});
+
+	async function saveDraft() {
+		if (sent) return;
+		const snap = draftSnapshot;
+		if (snap === lastSaved) return;
+		const hasContent = to.trim() || subject.trim() || text.trim();
+		if (!hasContent) {
+			// Everything cleared — drop the draft entirely.
+			if (draftId) {
+				try {
+					await fetch(`/api/messages/draft?id=${encodeURIComponent(draftId)}`, { method: 'DELETE' });
+				} catch { /* ignore */ }
+				draftId = '';
+			}
+			lastSaved = snap;
+			draftStatus = 'idle';
+			return;
+		}
+		draftStatus = 'saving';
+		try {
+			const resp = await fetch('/api/messages/draft', {
+				method: 'PUT',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ id: draftId || undefined, to, cc, subject, text })
+			});
+			if (resp.ok) {
+				const result = (await resp.json()) as { id: string };
+				draftId = result.id;
+				lastSaved = snap;
+				draftStatus = 'saved';
+			} else {
+				draftStatus = 'error';
+			}
+		} catch {
+			draftStatus = 'error';
+		}
+	}
 
 function chooseFiles(selected: FileList | null) {
 		if (!selected) return;
@@ -97,6 +170,10 @@ function formatMB(bytes: number) {
 					await update();
 					sending = false;
 					if (result.type === 'success' || result.type === 'redirect') {
+						// Message is on its way — stop autosaving and let the server-side
+						// action delete the draft.
+						sent = true;
+						if (draftTimer) clearTimeout(draftTimer);
 						toastStore.success('Message sent!');
 						dirty = false;
 					} else if (result.type === 'failure') {
@@ -107,14 +184,16 @@ function formatMB(bytes: number) {
 	}}>
 		<div class="address-fields">
 			<label class="field inline"><span>From</span><input type="text" value={data.user.email} disabled /></label>
-			<label class="field inline"><span>To</span><input type="text" name="to" value={data.prefill.to} placeholder="friend@example.com" required autocomplete="off" /></label>
-			<label class="field inline subject"><span>Subject</span><input type="text" name="subject" value={data.prefill.subject} placeholder="What is this about?" required /></label>
+			<label class="field inline"><span>To</span><input type="text" name="to" bind:value={to} placeholder="friend@example.com" required autocomplete="off" /></label>
+			<label class="field inline subject"><span>Subject</span><input type="text" name="subject" bind:value={subject} placeholder="What is this about?" required /></label>
 		</div>
 
 		<label class="message-field">
 			<span class="sr-only">Message</span>
-			<textarea name="body" rows="15" placeholder="Write your message…" required></textarea>
+			<textarea name="body" bind:value={text} rows="15" placeholder="Write your message…" required></textarea>
 		</label>
+
+		<input type="hidden" name="draft_id" value={draftId} />
 
 		<input bind:this={fileInput} class="file-input" type="file" name="attachments" multiple onchange={(event) => chooseFiles(event.currentTarget.files)} />
 		<div
@@ -147,7 +226,14 @@ function formatMB(bytes: number) {
 		{#if form?.error}<div class="notice error" role="alert">{form.error}</div>{/if}
 
 		<footer class="composer-footer">
-			<span class:over-limit={totalSize > 26_214_400}>{files.length ? `${files.length} ${files.length === 1 ? 'file' : 'files'} · ${formatSize(totalSize)}` : 'No attachments'}</span>
+			<div class="footer-left">
+				<span class="draft-status" aria-live="polite">
+					{#if draftStatus === 'saving'}<span class="saving">Saving draft…</span>
+					{:else if draftStatus === 'saved'}<span class="saved">✓ Draft saved</span>
+					{:else if draftStatus === 'error'}<span class="status-error">Couldn't save draft</span>{/if}
+				</span>
+				<span class="file-info" class:over-limit={totalSize > 26_214_400}>{files.length ? `${files.length} ${files.length === 1 ? 'file' : 'files'} · ${formatSize(totalSize)}` : 'No attachments'}</span>
+			</div>
 			<button class="btn btn-primary send" type="submit" disabled={sending || totalSize > 26_214_400}>
 				<svg viewBox="0 0 24 24" fill="none"><path d="m21 3-7.5 18-3.1-7.4L3 10.5 21 3Zm-10.6 10.6L21 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
 				{sending ? 'Sending…' : 'Send message'}
@@ -198,7 +284,11 @@ function formatMB(bytes: number) {
 		.quota-warn strong { display: block; font-size: 12px; }
 		.quota-warn span { display: block; margin-top: 3px; font-size: 11px; line-height: 1.5; }
 	.composer-footer { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: var(--space-3) var(--space-5); border-top: 1px solid var(--border); background: var(--bg-card); }
-	.composer-footer > span { color: var(--text-muted); font-size: 10px; }
+	.footer-left { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; }
+	.draft-status { min-height: 13px; font-size: 10px; color: var(--text-muted); }
+	.draft-status .saved { color: var(--color-success); }
+	.draft-status .status-error { color: var(--color-danger); }
+	.file-info { color: var(--text-muted); font-size: 10px; }
 	.over-limit { color: var(--color-danger) !important; }
 	.send { padding: 10px 17px; }
 	.send svg { width: 17px; height: 17px; }
@@ -218,7 +308,7 @@ function formatMB(bytes: number) {
 		.drop-zone, .attachments, .notice { margin-right: var(--space-4); margin-left: var(--space-4); }
 		.drop-zone small { display: none; }
 		.composer-footer { padding: 10px var(--space-4) calc(10px + env(safe-area-inset-bottom, 0px)); gap: var(--space-3); border-radius: 0 0 var(--radius-md) var(--radius-md); }
-		.composer-footer > span { font-size: 11px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: none; }
+		.composer-footer .file-info { font-size: 11px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 		.send { flex: 1; justify-content: center; min-height: 44px; min-width: 0; white-space: nowrap; padding: 0 14px; }
 		.back { width: 38px; height: 38px; }
 	}

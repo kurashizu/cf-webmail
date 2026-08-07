@@ -332,7 +332,7 @@
 		padding: 0 11px;
 		border: 1px solid var(--border);
 		border-radius: var(--radius-md);
-		background: rgba(26, 26, 36, 0.72);
+		background: color-mix(in srgb, var(--bg-card) 72%, transparent);
 		transition: border-color var(--transition-fast), background var(--transition-fast);
 	}
 

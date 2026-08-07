@@ -1,29 +1,17 @@
 <script lang="ts">
-	let theme = $state<'dark' | 'light'>('dark');
-	const metaColor = { dark: '#0a0a0f', light: '#f3f3f8' };
+	import { themeStore, applyTheme, type Theme } from '$lib/stores/theme';
+
+	const metaColor: Record<Theme, string> = { dark: '#0a0a0f', light: '#f3f3f8' };
+
+	let theme = $state<Theme>('dark');
 
 	$effect(() => {
-		theme = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+		theme = $themeStore;
 	});
 
-	function setTheme(next: 'dark' | 'light') {
-		theme = next;
-		document.documentElement.setAttribute('data-theme', next);
-		try {
-			localStorage.setItem('krsz-theme', next);
-		} catch {
-			/* ignore */
-		}
-		reflectMetaColor();
-	}
-
-	function reflectMetaColor() {
+	$effect(() => {
 		const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
 		if (meta) meta.setAttribute('content', metaColor[theme]);
-	}
-
-	$effect(() => {
-		reflectMetaColor();
 	});
 </script>
 
@@ -31,7 +19,7 @@
 	<button
 		class="theme-toggle"
 		type="button"
-		onclick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+		onclick={() => applyTheme(theme === 'dark' ? 'light' : 'dark')}
 		aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
 		title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
 	>

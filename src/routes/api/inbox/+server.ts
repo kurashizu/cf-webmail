@@ -10,8 +10,12 @@ export const GET: RequestHandler = async ({ locals, platform, url }) => {
 	if (!locals.user) {
 		return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
 	}
+	// Match the list page's pagination so polling never overflows or re-orders.
+	const pageSize = Math.max(1, Number(platform?.env.DEFAULT_PAGE_SIZE || 10) || 10);
+	const page = Math.max(1, parseInt(url.searchParams.get('page') || '1', 10) || 1);
 	const messages = await listMessages(platform!.env.DB, locals.user.accountId, 'INBOX', {
-		limit: 100
+		limit: pageSize,
+		offset: (page - 1) * pageSize
 	});
 	const serialised = messages.map((m: any) => ({
 		id: m.id,

@@ -89,6 +89,7 @@
 	}
 
 	function messageHref(message: any) {
+		if (data.folderSlug === 'drafts') return `/compose?draft=${message.id}`;
 		if (data.folderSlug !== 'starred') return `/${data.folderSlug}/${message.id}`;
 		const original = message.folder === 'INBOX' ? 'inbox' : String(message.folder).toLowerCase();
 		return `/${original}/${message.id}`;

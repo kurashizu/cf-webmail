@@ -121,6 +121,43 @@ export const apiSections: readonly ApiSectionSpec[] = [
 				responseExample: '{ "ok": true, "messageId": "5b1a..." }'
 			},
 			{
+				id: 'save-draft',
+				method: 'PUT',
+				path: '/api/messages/draft',
+				summary: 'Save a draft (composer autosave)',
+				description:
+					'Inserts a new draft in the Drafts folder or updates an existing one (pass `id` from a previous response). The composer calls this while typing; the draft is deleted automatically when the message is sent.',
+				auth: 'session',
+				requestFields: [
+					{ name: 'id', type: 'string', description: 'Existing draft id to update; omit to create.' },
+					{ name: 'to', type: 'string', description: 'Comma-separated recipient list.' },
+					{ name: 'cc', type: 'string', description: 'Comma-separated CC list.' },
+					{ name: 'subject', type: 'string', description: 'Subject line.' },
+					{ name: 'text', type: 'string', description: 'Plain-text body.' }
+				],
+				responseExample: '{ "ok": true, "id": "3f2b..." }'
+			},
+			{
+				id: 'get-draft',
+				method: 'GET',
+				path: '/api/messages/draft?id={draftId}',
+				summary: 'Fetch a draft',
+				description:
+					'Returns the recipient, subject, and body of a draft in the Drafts folder so the composer can restore it.',
+				auth: 'session',
+				responseExample: '{ "ok": true, "draft": { "id": "3f2b...", "to": "a@b.com", "cc": "", "subject": "Hi", "text": "..." } }'
+			},
+			{
+				id: 'delete-draft',
+				method: 'DELETE',
+				path: '/api/messages/draft?id={draftId}',
+				summary: 'Delete a draft',
+				description:
+					'Deletes a draft row and its stored body. Called by the composer when the user clears the message, and by the send path after a successful send.',
+				auth: 'session',
+				responseExample: '{ "ok": true }'
+			},
+			{
 				id: 'get-message-body',
 				method: 'GET',
 				path: '/api/messages/{id}/body',

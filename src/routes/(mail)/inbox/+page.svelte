@@ -13,6 +13,7 @@
 		let lastUpdated = $state<Date | null>(null);
 		let newMessageCount = $state(0);
 		let previousIds = new Set<string>();
+		let currentPage = 0;
 		let selected = $state<Set<string>>(new Set());
 		let bulkBusy = $state(false);
 		let selectAllInput = $state<HTMLInputElement | null>(null);
@@ -76,7 +77,7 @@ async function refreshInbox(manual = false) {
 			refreshing = true;
 			if (manual) actionError = '';
 			try {
-				const resp = await fetch('/api/inbox');
+				const resp = await fetch(`/api/inbox?page=${data.pagination.page}`);
 				if (!resp.ok) throw new Error();
 				const fresh = await resp.json() as { messages: any[] };
 				if (fresh && Array.isArray(fresh.messages)) {
@@ -111,11 +112,13 @@ async function refreshInbox(manual = false) {
 
 	$effect(() => {
 			const source = data.messages;
-			const nextMessages = source.map((message: any) => ({ ...message, flags: [...message.flags] }));
-			const incoming = nextMessages.filter((message: any) => previousIds.size > 0 && !previousIds.has(message.id));
-			if (incoming.length) newMessageCount += incoming.length;
-			previousIds = new Set(nextMessages.map((message: any) => message.id));
-			messages = nextMessages;
+			// When the page changes, reseed tracking so older messages on another
+			// page are never reported as "new".
+			if (data.pagination.page !== currentPage) {
+				currentPage = data.pagination.page;
+				previousIds = new Set(source.map((message: any) => message.id));
+			}
+			messages = source.map((message: any) => ({ ...message, flags: [...message.flags] }));
 			selected = new Set();
 		});
 
