@@ -34,7 +34,7 @@ onMount(async () => {
 		}
 	});
 
-	/* ---- Real-time draft autosave ---- */
+	/* ---- Manual draft save ---- */
 	// Capture the SSR prefill once (intentionally not reactive).
 	const initPrefill = untrack(() => data.prefill);
 	const initDraftId = untrack(() => data.draftId || '');
@@ -42,51 +42,31 @@ onMount(async () => {
 	const initCc = initPrefill.cc || '';
 	const initSubject = initPrefill.subject;
 	const initText = initPrefill.text || '';
+	const initSnapshot = JSON.stringify({ to: initTo.trim(), cc: initCc.trim(), subject: initSubject.trim(), text: initText });
 	let to = $state(initTo);
 	let cc = $state(initCc);
 	let subject = $state(initSubject);
 	let text = $state(initText);
 	let draftId = $state(initDraftId);
 	let draftStatus = $state<'idle' | 'saving' | 'saved' | 'error'>('idle');
-	// Seed with the initial snapshot so a freshly-opened compose isn't saved
-	// (and an existing draft isn't rewritten) until the user actually types.
-	let lastSaved = $state(
-		JSON.stringify({ to: initTo.trim(), cc: initCc.trim(), subject: initSubject.trim(), text: initText })
-	);
-	let draftTimer: ReturnType<typeof setTimeout> | null = null;
 	let sent = $state(false);
 
 	const draftSnapshot = $derived(
 		JSON.stringify({ to: to.trim(), cc: cc.trim(), subject: subject.trim(), text })
 	);
+	const hasContent = $derived(to.trim() !== '' || subject.trim() !== '' || text.trim() !== '');
+	let savedSnapshot = $state('');
 
+	// Mark the composer dirty once the user edits anything (used by the exit
+	// confirmation); a successful save or send clears it. Also clear the
+	// transient "saved" indicator as soon as the user types again.
 	$effect(() => {
-		void draftSnapshot;
-		if (draftSnapshot !== lastSaved) dirty = true;
-		if (draftTimer) clearTimeout(draftTimer);
-		draftTimer = setTimeout(saveDraft, 800);
-		return () => {
-			if (draftTimer) clearTimeout(draftTimer);
-		};
+		if (draftSnapshot !== initSnapshot) dirty = true;
+		if (draftStatus === 'saved' && draftSnapshot !== savedSnapshot) draftStatus = 'idle';
 	});
 
 	async function saveDraft() {
-		if (sent) return;
-		const snap = draftSnapshot;
-		if (snap === lastSaved) return;
-		const hasContent = to.trim() || subject.trim() || text.trim();
-		if (!hasContent) {
-			// Everything cleared — drop the draft entirely.
-			if (draftId) {
-				try {
-					await fetch(`/api/messages/draft?id=${encodeURIComponent(draftId)}`, { method: 'DELETE' });
-				} catch { /* ignore */ }
-				draftId = '';
-			}
-			lastSaved = snap;
-			draftStatus = 'idle';
-			return;
-		}
+		if (sent || !hasContent || draftStatus === 'saving') return;
 		draftStatus = 'saving';
 		try {
 			const resp = await fetch('/api/messages/draft', {
@@ -97,8 +77,9 @@ onMount(async () => {
 			if (resp.ok) {
 				const result = (await resp.json()) as { id: string };
 				draftId = result.id;
-				lastSaved = snap;
+				savedSnapshot = draftSnapshot;
 				draftStatus = 'saved';
+				dirty = false;
 			} else {
 				draftStatus = 'error';
 			}
@@ -173,7 +154,6 @@ function formatMB(bytes: number) {
 						// Message is on its way — stop autosaving and let the server-side
 						// action delete the draft.
 						sent = true;
-						if (draftTimer) clearTimeout(draftTimer);
 						toastStore.success('Message sent!');
 						dirty = false;
 					} else if (result.type === 'failure') {
@@ -234,10 +214,16 @@ function formatMB(bytes: number) {
 				</span>
 				<span class="file-info" class:over-limit={totalSize > 26_214_400}>{files.length ? `${files.length} ${files.length === 1 ? 'file' : 'files'} · ${formatSize(totalSize)}` : 'No attachments'}</span>
 			</div>
-			<button class="btn btn-primary send" type="submit" disabled={sending || totalSize > 26_214_400}>
-				<svg viewBox="0 0 24 24" fill="none"><path d="m21 3-7.5 18-3.1-7.4L3 10.5 21 3Zm-10.6 10.6L21 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-				{sending ? 'Sending…' : 'Send message'}
-			</button>
+			<div class="footer-actions">
+				<button type="button" class="btn save-draft" onclick={saveDraft} disabled={sent || !hasContent || draftStatus === 'saving'} title="Save this message as a draft that you can finish later">
+					<svg viewBox="0 0 24 24" fill="none"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Zm-9 0V14h4v7" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M7 3v4h7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+					{draftId ? 'Update draft' : 'Save draft'}
+				</button>
+				<button class="btn btn-primary send" type="submit" disabled={sending || totalSize > 26_214_400}>
+					<svg viewBox="0 0 24 24" fill="none"><path d="m21 3-7.5 18-3.1-7.4L3 10.5 21 3Zm-10.6 10.6L21 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+					{sending ? 'Sending…' : 'Send message'}
+				</button>
+			</div>
 		</footer>
 	</form>
 </section>
@@ -289,6 +275,11 @@ function formatMB(bytes: number) {
 	.draft-status .saved { color: var(--color-success); }
 	.draft-status .status-error { color: var(--color-danger); }
 	.file-info { color: var(--text-muted); font-size: 10px; }
+	.footer-actions { display: flex; align-items: center; gap: var(--space-2); }
+	.save-draft { display: inline-flex; align-items: center; gap: 7px; padding: 10px 14px; color: var(--text-secondary); border-color: var(--border-hover); }
+	.save-draft:hover { background: var(--accent-subtle); border-color: var(--border-hover); color: var(--text); }
+	.save-draft svg { width: 15px; height: 15px; }
+	.save-draft:disabled { opacity: .5; cursor: not-allowed; }
 	.over-limit { color: var(--color-danger) !important; }
 	.send { padding: 10px 17px; }
 	.send svg { width: 17px; height: 17px; }
@@ -309,6 +300,9 @@ function formatMB(bytes: number) {
 		.drop-zone small { display: none; }
 		.composer-footer { padding: 10px var(--space-4) calc(10px + env(safe-area-inset-bottom, 0px)); gap: var(--space-3); border-radius: 0 0 var(--radius-md) var(--radius-md); }
 		.composer-footer .file-info { font-size: 11px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+		.footer-actions { gap: 6px; }
+		.footer-actions .save-draft, .footer-actions .send { min-height: 44px; white-space: nowrap; }
+		.save-draft { padding: 0 10px; }
 		.send { flex: 1; justify-content: center; min-height: 44px; min-width: 0; white-space: nowrap; padding: 0 14px; }
 		.back { width: 38px; height: 38px; }
 	}

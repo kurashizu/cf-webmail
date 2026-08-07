@@ -353,7 +353,7 @@ export async function upsertDraft(db, accountId, draft) {
 				`UPDATE messages
 				    SET folder = 'Drafts',
 				        to_addrs = ?, cc_addrs = ?, subject = ?, preview = ?,
-				        body_text_key = ?, size = ?, received_at = ?, updated_at = ?,
+				        body_text_key = ?, size = ?, received_at = ?,
 				        flags = ?
 				  WHERE account_id = ? AND id = ?`
 			)
@@ -364,7 +364,6 @@ export async function upsertDraft(db, accountId, draft) {
 				preview,
 				draft.bodyTextKey || null,
 				draft.text?.length || 0,
-				now,
 				now,
 				JSON.stringify(['\\Seen']),
 				accountId,
