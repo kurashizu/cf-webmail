@@ -1,17 +1,26 @@
 import type { PageServerLoad } from './$types';
 import { redirect } from '@sveltejs/kit';
-import { listMessages } from '$lib/server/db/queries';
+import { listMessages, countMessagesInFolder } from '$lib/server/db/queries';
 
-export const load: PageServerLoad = async ({ locals, platform }) => {
+export const load: PageServerLoad = async ({ locals, platform, url }) => {
 	if (!locals.user) throw redirect(303, '/login');
+
+	const pageSize = Math.max(1, Number(platform?.env.DEFAULT_PAGE_SIZE || 20) || 20);
+	const page = Math.max(1, parseInt(url.searchParams.get('page') || '1', 10) || 1);
+	const total = await countMessagesInFolder(platform!.env.DB, locals.user.accountId, 'INBOX');
+	const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
 	const messages = await listMessages(platform!.env.DB, locals.user.accountId, 'INBOX', {
-		limit: 100
+		limit: pageSize,
+		offset: (page - 1) * pageSize
 	});
+
 	return {
 		folder: 'INBOX',
 		folderSlug: 'inbox',
 		messages: messages.map(serialise),
-		userEmail: locals.user.email
+		userEmail: locals.user.email,
+		pagination: { page, pageSize, total, totalPages }
 	};
 };
 

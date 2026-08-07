@@ -1,6 +1,6 @@
 import type { PageServerLoad } from './$types';
 import { error, redirect } from '@sveltejs/kit';
-import { listMessages } from '$lib/server/db/queries';
+import { listMessages, countMessagesInFolder } from '$lib/server/db/queries';
 
 const SLUG_MAP: Record<string, string> = {
 	inbox: 'INBOX',
@@ -11,19 +11,26 @@ const SLUG_MAP: Record<string, string> = {
 	starred: 'Starred'
 };
 
-export const load: PageServerLoad = async ({ params, locals, platform }) => {
+export const load: PageServerLoad = async ({ params, locals, platform, url }) => {
 	if (!locals.user) throw redirect(303, '/login');
 	const folder = SLUG_MAP[params.folder.toLowerCase()];
 	if (!folder) throw error(404, 'Unknown folder');
 
+	const pageSize = Math.max(1, Number(platform?.env.DEFAULT_PAGE_SIZE || 20) || 20);
+	const page = Math.max(1, parseInt(url.searchParams.get('page') || '1', 10) || 1);
+	const total = await countMessagesInFolder(platform!.env.DB, locals.user.accountId, folder);
+	const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
 	const messages = await listMessages(platform!.env.DB, locals.user.accountId, folder, {
-		limit: 100
+		limit: pageSize,
+		offset: (page - 1) * pageSize
 	});
 
 	return {
 		folder,
 		folderSlug: params.folder.toLowerCase(),
-		messages: messages.map(serialise)
+		messages: messages.map(serialise),
+		pagination: { page, pageSize, total, totalPages }
 	};
 };
 

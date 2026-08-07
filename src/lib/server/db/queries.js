@@ -213,11 +213,12 @@ export async function bumpFolderOnReceive(db, accountId, folder, ts) {
 // --- messages -------------------------------------------------------------
 
 /**
- * List messages in a folder, newest first.
+ * List messages in a folder, newest first. Pagination via `offset` (0-based).
  */
 export async function listMessages(db, accountId, folder, opts = {}) {
 	const limit = opts.limit ?? 50;
 	const before = opts.before; // received_at cursor
+	const offset = opts.offset ?? 0;
 
 	let query;
 	let bind;
@@ -229,17 +230,33 @@ export async function listMessages(db, accountId, folder, opts = {}) {
 		query = `SELECT * FROM messages
 		          WHERE account_id = ? AND ${folderFilter} AND received_at < ?
 		          ORDER BY received_at DESC
-		          LIMIT ?`;
-		bind = starred ? [accountId, before, limit] : [accountId, folder, before, limit];
+		          LIMIT ? OFFSET ?`;
+		bind = starred ? [accountId, before, limit, offset] : [accountId, folder, before, limit, offset];
 	} else {
 		query = `SELECT * FROM messages
 		          WHERE account_id = ? AND ${folderFilter}
 		          ORDER BY received_at DESC
-		          LIMIT ?`;
-		bind = starred ? [accountId, limit] : [accountId, folder, limit];
+		          LIMIT ? OFFSET ?`;
+		bind = starred ? [accountId, limit, offset] : [accountId, folder, limit, offset];
 	}
 	const result = await db.prepare(query).bind(...bind).all();
 	return result.results || [];
+}
+
+/**
+ * Count messages in a folder using the exact same view filter as listMessages,
+ * so pagination totals match what get listed.
+ */
+export async function countMessagesInFolder(db, accountId, folder) {
+	const starred = folder === 'Starred';
+	const folderFilter = starred
+		? `folder != 'Trash' AND flags LIKE '%\\Flagged%'`
+		: 'folder = ?';
+	const sql = `SELECT COUNT(*) AS c FROM messages WHERE account_id = ? AND ${folderFilter}`;
+	const row = starred
+		? await db.prepare(sql).bind(accountId).first()
+		: await db.prepare(sql).bind(accountId, folder).first();
+	return Number(row?.c || 0);
 }
 
 export async function searchMessages(db, accountId, term, filters = {}, limit = 100) {

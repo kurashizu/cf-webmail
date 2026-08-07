@@ -3,6 +3,7 @@
 		import { invalidate } from '$app/navigation';
 		import { formatDate, initials } from '$lib/format';
 		import { toastStore } from '$lib/toast';
+		import Pager from '$lib/components/Pager.svelte';
 
 	let { data } = $props();
 		let messages = $state<any[]>([]);
@@ -69,6 +70,8 @@
 
 async function refreshInbox(manual = false) {
 			if (refreshing) return;
+			// Only refresh on the first page so the current page isn't clobbered.
+			if (data.pagination.page !== 1) return;
 			if (!manual && document.visibilityState !== 'visible') return;
 			refreshing = true;
 			if (manual) actionError = '';
@@ -330,6 +333,8 @@ async function refreshInbox(manual = false) {
 			{/each}
 		</ul>
 	{/if}
+
+	<Pager page={data.pagination.page} totalPages={data.pagination.totalPages} baseHref="/inbox" />
 </section>
 
 <style>

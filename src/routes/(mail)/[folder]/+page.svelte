@@ -3,6 +3,7 @@
 		import { onMount } from 'svelte';
 		import { formatDate, initials } from '$lib/format';
 		import { toastStore } from '$lib/toast';
+		import Pager from '$lib/components/Pager.svelte';
 	let { data } = $props();
 	let messages = $state<any[]>([]);
 	let emptying = $state(false);
@@ -164,6 +165,8 @@
 			{/each}
 		</ul>
 	{/if}
+
+	<Pager page={data.pagination.page} totalPages={data.pagination.totalPages} baseHref={`/${data.folderSlug}`} />
 </section>
 
 <style>

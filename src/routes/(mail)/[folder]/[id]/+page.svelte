@@ -7,6 +7,8 @@
 
 	let bodyHtml = $state('');
 	let bodyText = $state('');
+	let renderMode = $state<'html' | 'text'>('html');
+	let bodyFrame = $state<HTMLIFrameElement | null>(null);
 	let loading = $state(true);
 	let actionBusy = $state(false);
 	let error = $state<string | null>(null);
@@ -19,25 +21,11 @@
 	const replySubject = $derived(/^re:/i.test(data.message.subject) ? data.message.subject : `Re: ${data.message.subject}`);
 	const replyHref = $derived(`/compose?to=${encodeURIComponent(data.message.fromAddr || '')}&subject=${encodeURIComponent(replySubject)}`);
 
-	async function loadBody() {
+	async function loadBodies() {
 		loading = true;
 		error = null;
 		try {
-			if (data.message.hasHtml) {
-				const response = await fetch(`/api/messages/${data.message.id}/body?kind=html`);
-				if (response.ok) {
-					const result = (await response.json()) as { body?: string };
-					bodyHtml = result.body || '';
-					if (bodyHtml) return;
-				}
-			}
-			if (data.message.hasText) {
-				const response = await fetch(`/api/messages/${data.message.id}/body?kind=text`);
-				if (response.ok) {
-					const result = (await response.json()) as { body?: string };
-					bodyText = result.body || '';
-				}
-			}
+			await Promise.all([fetchBody('html'), fetchBody('text')]);
 		} catch {
 			error = 'Failed to load the message body.';
 		} finally {
@@ -45,11 +33,93 @@
 		}
 	}
 
+	/** Force the email body onto the dark theme. Parent CSS vars don't cascade
+	 * into a srcdoc iframe, so use literal theme colours. Emails that declare
+	 * their own colours keep them; anything without explicit styling falls onto
+	 * the dark canvas. */
+	function injectBaseStyles(html: string): string {
+		return `<style>:root{color-scheme:dark}html{background:#121216!important;color-scheme:dark}body{background-color:transparent!important}a{color:#ff9b63}</style>${html}`;
+	}
+
+	async function fetchBody(kind: 'html' | 'text') {
+		const has = kind === 'html' ? data.message.hasHtml : data.message.hasText;
+		const loaded = kind === 'html' ? bodyHtml : bodyText;
+		if (!has || loaded !== '') return;
+		try {
+			const response = await fetch(`/api/messages/${data.message.id}/body?kind=${kind}`);
+			if (response.ok) {
+				const result = (await response.json()) as { body?: string };
+				const body = result.body || '';
+				if (kind === 'html') bodyHtml = injectBaseStyles(body);
+				else bodyText = body;
+			}
+		} catch {
+			// Ignore — the sibling body (or the empty state) still renders.
+		}
+	}
+
+	function setRenderMode(mode: 'html' | 'text') {
+		if (mode === 'html' && !data.message.hasHtml) return;
+		if (mode === 'text' && !data.message.hasText) return;
+		renderMode = mode;
+		if (mode === 'html' && bodyHtml === '' && data.message.hasHtml) void fetchBody('html');
+		if (mode === 'text' && bodyText === '' && data.message.hasText) void fetchBody('text');
+	}
+
+	let currentId = '';
+	$effect(() => {
+		const id = data.message.id;
+		if (id === currentId) return;
+		currentId = id;
+		renderMode = data.message.hasHtml ? 'html' : 'text';
+		bodyHtml = '';
+		bodyText = '';
+		void loadBodies();
+	});
+
+	/** Let mail links open in a new tab instead of being swallowed by the sandbox. */
+	function hijackFrameClicks(event: MouseEvent) {
+		try {
+			const target = event.target as Element | null;
+			if (!target || typeof target.closest !== 'function') return;
+			const anchor = target.closest('a[href]') as HTMLAnchorElement | null;
+			if (!anchor) return;
+			const href = String(anchor.getAttribute('href') || '').trim();
+			if (/^(https?:\/\/|mailto:)/i.test(href)) {
+				event.preventDefault();
+				event.stopPropagation();
+				window.open(href, '_blank', 'noopener,noreferrer');
+			}
+		} catch {
+			// Sandbox may refuse to expose the document — ignore.
+		}
+	}
+
 	function resizeFrame(event: Event) {
 		const frame = event.currentTarget as HTMLIFrameElement;
 		try {
-			const height = frame.contentDocument?.documentElement.scrollHeight || 420;
-			frameHeight = Math.min(Math.max(height + 24, 320), 1800);
+			const doc = frame.contentDocument;
+			const height = doc?.documentElement.scrollHeight || 420;
+			// No upper cap: the iframe grows to fit the full message body.
+			frameHeight = Math.max(height + 24, 320);
+			// Keep re-measuring as the content changes (e.g. images finishing loading).
+			if (doc?.body && !(frame as unknown as { __mailResizeObserved?: boolean }).__mailResizeObserved) {
+				(frame as unknown as { __mailResizeObserved?: boolean }).__mailResizeObserved = true;
+				const observer = new ResizeObserver(() => {
+					try {
+						const h = doc.documentElement.scrollHeight;
+						if (h) frameHeight = Math.max(h + 24, 320);
+					} catch {
+						/* ignore */
+					}
+				});
+				observer.observe(doc.body);
+			}
+			// Hook link handling once per iframe load (srcdoc is freshly created).
+			if (doc && !(frame as unknown as { __mailLinksHooked?: boolean }).__mailLinksHooked) {
+				(frame as unknown as { __mailLinksHooked?: boolean }).__mailLinksHooked = true;
+				doc.addEventListener('click', hijackFrameClicks, true);
+			}
 		} catch {
 			frameHeight = 520;
 		}
@@ -108,7 +178,6 @@
 			}
 
 	onMount(async () => {
-		loadBody();
 		const response = await fetch(`/api/messages/${data.message.id}/read`, { method: 'POST' });
 		if (response.ok) await invalidateAll();
 	});
@@ -169,10 +238,17 @@
 			</section>
 		{/if}
 
+		{#if data.message.hasHtml && data.message.hasText}
+			<div class="view-toggle" role="group" aria-label="Message view mode">
+				<button type="button" class:active={renderMode === 'html'} onclick={() => setRenderMode('html')}>HTML</button>
+				<button type="button" class:active={renderMode === 'text'} onclick={() => setRenderMode('text')}>Plain text</button>
+			</div>
+		{/if}
+
 		<section class="body">
 			{#if loading}<div class="skeleton"><span></span><span></span><span></span><span></span></div>
-			{:else if bodyHtml}<iframe srcdoc={bodyHtml} title="Message body" sandbox="allow-same-origin" style:height={`${frameHeight}px`} onload={resizeFrame}></iframe>
-			{:else if bodyText}<pre>{bodyText}</pre>
+			{:else if renderMode === 'html' && data.message.hasHtml && bodyHtml}<iframe bind:this={bodyFrame} srcdoc={bodyHtml} title="Message body" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" style:height={`${frameHeight}px`} onload={resizeFrame}></iframe>
+			{:else if bodyText || data.message.hasText}<pre>{bodyText || ''}</pre>
 			{:else}<p class="empty">This message has no body.</p>{/if}
 		</section>
 	</section>
@@ -217,7 +293,34 @@
 	.attachment-card small { color: var(--text-muted); font-size: 9px; }
 	.download { color: var(--text-muted); }
 	.body { min-height: 320px; padding: var(--space-6); background: var(--bg-secondary); }
-	.body iframe { display: block; width: 100%; min-height: 320px; border: 0; border-radius: var(--radius-md); background: white; transition: height var(--transition-base); }
+	.view-toggle {
+		display: inline-flex;
+		align-items: center;
+		gap: 2px;
+		padding: 3px;
+		margin: 0 0 var(--space-4);
+		border: 1px solid var(--border);
+		border-radius: var(--radius-md);
+		background: var(--bg-card);
+	}
+	.view-toggle button {
+		padding: 5px 12px;
+		border: 0;
+		border-radius: 6px;
+		background: transparent;
+		color: var(--text-muted);
+		font-size: 11px;
+		cursor: pointer;
+		transition: all var(--transition-fast);
+	}
+	.view-toggle button:hover {
+		color: var(--text-primary);
+	}
+	.view-toggle button.active {
+		background: var(--accent-subtle);
+		color: var(--accent);
+	}
+	.body iframe { display: block; width: 100%; min-height: 320px; border: 0; border-radius: var(--radius-md); background: transparent; transition: height var(--transition-base); }
 	.body pre { margin: 0; white-space: pre-wrap; word-break: break-word; font-family: inherit; font-size: 14px; color: var(--text-primary); line-height: 1.75; }
 	.body .empty { color: var(--text-muted); font-size: 13px; }
 	.skeleton { display: grid; gap: 12px; padding-top: 5px; }
