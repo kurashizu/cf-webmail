@@ -7,7 +7,6 @@ const SLUG_MAP: Record<string, string> = {
 	sent: 'Sent',
 	drafts: 'Drafts',
 	trash: 'Trash',
-	junk: 'Junk',
 	starred: 'Starred'
 };
 
@@ -16,7 +15,7 @@ export const load: PageServerLoad = async ({ params, locals, platform, url }) =>
 	const folder = SLUG_MAP[params.folder.toLowerCase()];
 	if (!folder) throw error(404, 'Unknown folder');
 
-	const pageSize = Math.max(1, Number(platform?.env.DEFAULT_PAGE_SIZE || 20) || 20);
+	const pageSize = Math.max(1, Number(platform?.env.DEFAULT_PAGE_SIZE || 10) || 10);
 	const page = Math.max(1, parseInt(url.searchParams.get('page') || '1', 10) || 1);
 	const total = await countMessagesInFolder(platform!.env.DB, locals.user.accountId, folder);
 	const totalPages = Math.max(1, Math.ceil(total / pageSize));

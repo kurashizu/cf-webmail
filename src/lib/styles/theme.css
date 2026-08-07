@@ -82,3 +82,58 @@
 		--ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 		--ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 }
+
+/* Light theme — switched via the HTML data-theme attribute (see app.html bootstrap). */
+html[data-theme='light'] {
+	/* Surfaces */
+	--bg-primary: #f3f3f8;
+	--bg-secondary: #ffffff;
+	--bg-card: #f1f1f7;
+	--bg-elevated: #e8e8f0;
+
+	/* Borders */
+	--border: #d9d9e3;
+	--border-hover: #c2c2d4;
+
+	/* Text */
+	--text-primary: #1a1a22;
+	--text-secondary: #4f4f5c;
+	--text-muted: #8a8a9a;
+
+	/* Accent — slightly deepened orange for contrast on white */
+	--accent: #e8581c;
+	--accent-hover: #d04a13;
+	--accent-glow: rgba(232, 88, 28, 0.22);
+	--accent-subtle: rgba(232, 88, 28, 0.10);
+
+	/* Semantic */
+	--color-danger: #c0392b;
+	--color-danger-bright: #d64541;
+	--color-danger-border: rgba(192, 57, 43, 0.35);
+	--color-danger-bg: rgba(192, 57, 43, 0.08);
+	--color-danger-subtle: rgba(192, 57, 43, 0.12);
+	--color-warning: #8a5a10;
+	--color-warning-border: rgba(178, 116, 20, 0.35);
+	--color-warning-bg: rgba(178, 116, 20, 0.10);
+	--color-warning-fg: #b26c13;
+	--color-success: #2e7d4f;
+	--color-success-border: rgba(46, 125, 79, 0.35);
+	--color-success-bg: rgba(46, 125, 79, 0.10);
+	--color-star: #c79100;
+
+	/* Shadows */
+	--shadow-sm: 0 1px 3px rgba(20, 20, 40, 0.08);
+	--shadow-md: 0 4px 16px rgba(20, 20, 40, 0.10);
+	--shadow-lg: 0 8px 32px rgba(20, 20, 40, 0.12);
+	--shadow-toast: 0 8px 32px rgba(20, 20, 40, 0.14);
+
+	color-scheme: light;
+}
+
+/* Sticky bars that hardcode dark glases — retint in light mode. */
+html[data-theme='light'] .topbar { background: rgba(255, 255, 255, 0.78); }
+html[data-theme='light'] .bottom-nav { background: rgba(255, 255, 255, 0.92); }
+
+:root {
+	color-scheme: dark;
+}

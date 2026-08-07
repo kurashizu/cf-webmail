@@ -138,7 +138,7 @@ export async function deleteAccountData(db, accountId) {
 
 // --- folders --------------------------------------------------------------
 
-const DEFAULT_FOLDERS = ['INBOX', 'Sent', 'Drafts', 'Trash', 'Junk', 'Starred'];
+const DEFAULT_FOLDERS = ['INBOX', 'Sent', 'Drafts', 'Trash', 'Starred'];
 
 /**
  * Ensure the default folder rows exist for an account.
@@ -185,9 +185,8 @@ export async function listFolders(db, accountId) {
 			            WHEN 'Starred' THEN 1
 			            WHEN 'Sent' THEN 2
 			            WHEN 'Drafts' THEN 3
-			            WHEN 'Junk' THEN 4
-			            WHEN 'Trash' THEN 5
-			            ELSE 6 END`
+			            WHEN 'Trash' THEN 4
+			            ELSE 5 END`
 		)
 		.bind(accountId)
 		.all();
@@ -229,13 +228,13 @@ export async function listMessages(db, accountId, folder, opts = {}) {
 	if (before) {
 		query = `SELECT * FROM messages
 		          WHERE account_id = ? AND ${folderFilter} AND received_at < ?
-		          ORDER BY received_at DESC
+		          ORDER BY received_at DESC, id DESC
 		          LIMIT ? OFFSET ?`;
 		bind = starred ? [accountId, before, limit, offset] : [accountId, folder, before, limit, offset];
 	} else {
 		query = `SELECT * FROM messages
 		          WHERE account_id = ? AND ${folderFilter}
-		          ORDER BY received_at DESC
+		          ORDER BY received_at DESC, id DESC
 		          LIMIT ? OFFSET ?`;
 		bind = starred ? [accountId, limit, offset] : [accountId, folder, limit, offset];
 	}

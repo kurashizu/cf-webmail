@@ -277,7 +277,10 @@
 
 <style>
 	.app {
-		min-height: 100vh;
+		/* Lock the shell to the viewport so the sidebar never stretches or scrolls. */
+		height: 100vh;
+		height: 100dvh;
+		overflow: hidden;
 		display: flex;
 		flex-direction: column;
 	}
@@ -560,6 +563,12 @@
 	}
 
 	@media (max-width: 760px) {
+		.app {
+			height: auto;
+			min-height: 100vh;
+			overflow: visible;
+		}
+
 		.topbar {
 			padding: 0 var(--space-3);
 			gap: var(--space-2);

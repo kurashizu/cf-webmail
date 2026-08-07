@@ -5,7 +5,7 @@ import { listMessages, countMessagesInFolder } from '$lib/server/db/queries';
 export const load: PageServerLoad = async ({ locals, platform, url }) => {
 	if (!locals.user) throw redirect(303, '/login');
 
-	const pageSize = Math.max(1, Number(platform?.env.DEFAULT_PAGE_SIZE || 20) || 20);
+	const pageSize = Math.max(1, Number(platform?.env.DEFAULT_PAGE_SIZE || 10) || 10);
 	const page = Math.max(1, parseInt(url.searchParams.get('page') || '1', 10) || 1);
 	const total = await countMessagesInFolder(platform!.env.DB, locals.user.accountId, 'INBOX');
 	const totalPages = Math.max(1, Math.ceil(total / pageSize));

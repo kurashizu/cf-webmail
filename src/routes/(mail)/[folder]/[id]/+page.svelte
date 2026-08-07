@@ -192,6 +192,12 @@
 			<span>{data.folder === 'INBOX' ? 'Inbox' : data.folder}</span>
 		</a>
 		<div class="toolbar-actions">
+			{#if data.message.hasHtml && data.message.hasText}
+				<div class="view-toggle" role="group" aria-label="Message view mode">
+					<button type="button" class:active={renderMode === 'html'} onclick={() => setRenderMode('html')}>HTML</button>
+					<button type="button" class:active={renderMode === 'text'} onclick={() => setRenderMode('text')}>Plain text</button>
+				</div>
+			{/if}
 			<a class="tool primary" href={replyHref} title="Reply">
 				<svg viewBox="0 0 24 24" fill="none"><path d="m9 8-5 4 5 4v-3h4a7 7 0 0 1 7 7v-2a9 9 0 0 0-9-9H9V8Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg><span>Reply</span>
 			</a>
@@ -236,13 +242,6 @@
 					</a>
 				{/each}</div>
 			</section>
-		{/if}
-
-		{#if data.message.hasHtml && data.message.hasText}
-			<div class="view-toggle" role="group" aria-label="Message view mode">
-				<button type="button" class:active={renderMode === 'html'} onclick={() => setRenderMode('html')}>HTML</button>
-				<button type="button" class:active={renderMode === 'text'} onclick={() => setRenderMode('text')}>Plain text</button>
-			</div>
 		{/if}
 
 		<section class="body">
@@ -297,14 +296,15 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 2px;
-		padding: 3px;
-		margin: 0 0 var(--space-4);
+		padding: 2px;
+		margin: 0 4px 0 0;
 		border: 1px solid var(--border);
 		border-radius: var(--radius-md);
 		background: var(--bg-card);
 	}
 	.view-toggle button {
-		padding: 5px 12px;
+		min-height: 28px;
+		padding: 0 11px;
 		border: 0;
 		border-radius: 6px;
 		background: transparent;

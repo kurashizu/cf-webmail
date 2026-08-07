@@ -25,6 +25,13 @@
 		/>
 		%sveltekit.head%
 		<script>
+			// Apply the persisted theme before first paint to avoid a flash.
+			(function () {
+				var saved = null;
+				try { saved = localStorage.getItem('krsz-theme'); } catch (e) { /* ignore */ }
+				var theme = saved === 'light' ? 'light' : 'dark';
+				document.documentElement.setAttribute('data-theme', theme);
+			})();
 			// Register the service worker that ships from /sw.js. Skip in
 			// environments where Service Worker isn't available (SSR, sandboxes).
 			if ('serviceWorker' in navigator) {
