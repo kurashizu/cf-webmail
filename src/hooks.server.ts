@@ -1,10 +1,23 @@
 import type { Handle } from '@sveltejs/kit';
 import { verifySession, isSessionValid } from '$lib/server/auth/session';
+import {
+	DEFAULT_LOCALE,
+	COOKIE_NAME,
+	isLocale,
+	negotiateLocale
+} from '$lib/i18n/locale';
 
 const PUBLIC_PATHS = ['/', '/login', '/register', '/api/health'];
 
 export const handle: Handle = async ({ event, resolve }) => {
 	event.locals.user = null;
+
+	// ── Locale detection ───────────────────────────────────────────────
+	// Order: cookie > Accept-Language > default.
+	const cookieLocale = event.cookies.get(COOKIE_NAME);
+	const negotiated = negotiateLocale(event.request.headers.get('accept-language'));
+	event.locals.locale =
+		(cookieLocale && isLocale(cookieLocale) && cookieLocale) || negotiated || DEFAULT_LOCALE;
 
 	const token = event.cookies.get('session');
 	if (token && event.platform?.env) {
@@ -45,5 +58,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 		});
 	}
 
-	return resolve(event);
+	// Replace the static <html lang="en"> with the resolved locale so screen
+	// readers, browser translation features, and search engine hints pick up
+	// the right language before any client JS runs.
+	return resolve(event, {
+		transformPageChunk: ({ html }) => html.replace('<html lang="en"', `<html lang="${event.locals.locale}"`)
+	});
 };

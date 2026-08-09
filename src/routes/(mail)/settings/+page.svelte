@@ -2,8 +2,11 @@
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import { onMount } from 'svelte';
+	import { t, type Locale } from '$lib/i18n';
 
 	let { data, form } = $props();
+	const tt = (key: string, params?: Record<string, string | number>) =>
+		t(data.locale as Locale, key, params);
 
 	let showPasswords = $state(false);
 	let profileSaving = $state(false);
@@ -29,10 +32,10 @@
 		storageError = null;
 		try {
 			const response = await fetch('/api/storage', { headers: { accept: 'application/json' } });
-			if (!response.ok) throw new Error('Failed to load storage info.');
+			if (!response.ok) throw new Error(tt('settings.storageError'));
 			storage = await response.json();
 		} catch (err) {
-			storageError = err instanceof Error ? err.message : 'Storage unavailable.';
+			storageError = err instanceof Error ? err.message : tt('settings.storageError');
 		} finally {
 			storageLoading = false;
 		}
@@ -52,14 +55,14 @@
 	let usageLevel = $derived<'ok' | 'warn' | 'high'>(overallRatio >= 0.85 ? 'high' : overallRatio >= 0.6 ? 'warn' : 'ok');
 </script>
 
-<svelte:head><title>Settings · KRSZ Mail</title></svelte:head>
+<svelte:head><title>{tt('settings.title')} · {tt('common.brandName')}</title></svelte:head>
 
 <section class="page">
 	<header class="page-head">
 		<div>
-			<p class="eyebrow">Preferences</p>
-			<h1>Settings</h1>
-			<p class="subtitle">Manage your identity, password, and account access.</p>
+			<p class="eyebrow">{tt('settings.title')}</p>
+			<h1>{tt('settings.title')}</h1>
+			<p class="subtitle">{tt('settings.subtitle')}</p>
 		</div>
 	</header>
 
@@ -73,9 +76,9 @@
 				<p>{data.user.email}</p>
 			</div>
 			<div class="account-details">
-				<div><span>Role</span><strong>{data.user.role === 'admin' ? 'Administrator' : 'Member'}</strong></div>
-				<div><span>Member since</span><strong>{new Date(data.createdAt).toLocaleDateString()}</strong></div>
-				<div><span>Mailbox</span><strong>Active</strong></div>
+				<div><span>{tt('settings.roleLabel')}</span><strong>{data.user.role === 'admin' ? tt('settings.roleAdmin') : tt('settings.roleUser')}</strong></div>
+				<div><span>{tt('settings.memberSince')}</span><strong>{new Date(data.createdAt).toLocaleDateString()}</strong></div>
+				<div><span>{tt('settings.mailboxStatusLabel')}</span><strong>{tt('settings.mailboxActive')}</strong></div>
 			</div>
 		</aside>
 
@@ -85,7 +88,7 @@
 					<div class="section-icon" aria-hidden="true">
 						<svg viewBox="0 0 24 24" fill="none"><path d="M4 20c.8-3.5 3.7-6 8-6s7.2 2.5 8 6M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
 					</div>
-					<div><h2>Profile</h2><p>This name is shown on messages you send.</p></div>
+					<div><h2>{tt('settings.profileHeading')}</h2><p>{tt('settings.profileSubtitle')}</p></div>
 				</div>
 
 				<form method="POST" action="?/profile" use:enhance={() => {
@@ -97,12 +100,12 @@
 					};
 				}}>
 					<label class="field">
-						<span>Display name</span>
-						<input name="display_name" type="text" maxlength="80" value={form?.action === 'profile' && form?.displayName !== undefined ? form.displayName : data.displayName} placeholder="Your name" autocomplete="name" />
+						<span>{tt('settings.displayNameLabel')}</span>
+						<input name="display_name" type="text" maxlength="80" value={form?.action === 'profile' && form?.displayName !== undefined ? form.displayName : data.displayName} placeholder={tt('auth.displayNamePlaceholder')} autocomplete="name" />
 					</label>
 					{#if form?.action === 'profile' && form?.error}<div class="notice error" role="alert">{form.error}</div>{/if}
 					{#if form?.action === 'profile' && form?.success}<div class="notice success" role="status">{form.success}</div>{/if}
-					<div class="form-actions"><button class="btn btn-primary" type="submit" disabled={profileSaving}>{profileSaving ? 'Saving…' : 'Save profile'}</button></div>
+					<div class="form-actions"><button class="btn btn-primary" type="submit" disabled={profileSaving}>{profileSaving ? tt('common.saving') : tt('settings.saveProfile')}</button></div>
 				</form>
 			</section>
 
@@ -111,7 +114,7 @@
 					<div class="section-icon" aria-hidden="true">
 						<svg viewBox="0 0 24 24" fill="none"><rect x="4" y="10" width="16" height="11" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M8 10V7a4 4 0 1 1 8 0v3M12 15v2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
 					</div>
-					<div><h2>Password</h2><p>Use at least 6 characters and avoid reused passwords.</p></div>
+					<div><h2>{tt('settings.passwordHeading')}</h2><p>{tt('settings.passwordSubtitle')}</p></div>
 				</div>
 
 				<form method="POST" action="?/password" use:enhance={() => {
@@ -123,29 +126,29 @@
 				}}>
 					<div class="password-grid">
 						<label class="field full">
-							<span>Current password</span>
+							<span>{tt('settings.currentPassword')}</span>
 							<input name="current_password" type={showPasswords ? 'text' : 'password'} required autocomplete="current-password" />
 						</label>
 						<label class="field">
-							<span>New password</span>
+							<span>{tt('settings.newPassword')}</span>
 							<input name="new_password" type={showPasswords ? 'text' : 'password'} minlength="6" maxlength="256" required autocomplete="new-password" />
 						</label>
 						<label class="field">
-							<span>Confirm new password</span>
+							<span>{tt('settings.confirmPassword')}</span>
 							<input name="confirm_password" type={showPasswords ? 'text' : 'password'} minlength="6" maxlength="256" required autocomplete="new-password" />
 						</label>
 					</div>
-					<label class="toggle"><input type="checkbox" bind:checked={showPasswords} /><span>Show passwords</span></label>
+					<label class="toggle"><input type="checkbox" bind:checked={showPasswords} /><span>{tt('settings.showPasswords')}</span></label>
 					{#if form?.action === 'password' && form?.error}<div class="notice error" role="alert">{form.error}</div>{/if}
 					{#if form?.action === 'password' && form?.success}<div class="notice success" role="status">{form.success}</div>{/if}
-					<div class="form-actions"><button class="btn btn-primary" type="submit" disabled={passwordSaving}>{passwordSaving ? 'Changing…' : 'Change password'}</button></div>
+					<div class="form-actions"><button class="btn btn-primary" type="submit" disabled={passwordSaving}>{passwordSaving ? tt('common.saving') : tt('settings.changePassword')}</button></div>
 				</form>
 			</section>
 
 			{#if data.user.role === 'admin'}
 							<a class="admin-link card" href="/admin/users">
 								<div class="section-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M15 19a6 6 0 0 0-12 0M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7-5h5m-2.5-2.5v5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>
-								<div><strong>Administration</strong><span>Manage users, roles, passwords, sessions, and invitations.</span></div>
+								<div><strong>{tt('admin.users.title')}</strong><span>{tt('admin.users.subtitle')}</span></div>
 								<svg class="arrow" viewBox="0 0 24 24" fill="none"><path d="m9 18 6-6-6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
 							</a>
 						{/if}
@@ -155,36 +158,36 @@
 								<div class="section-icon" aria-hidden="true">
 									<svg viewBox="0 0 24 24" fill="none"><path d="M4 13a8 8 0 0 1 16 0M4 13v3a2 2 0 0 0 2 2h1v-7H6a2 2 0 0 0-2 2Zm16 0v3a2 2 0 0 1-2 2h-1v-7h1a2 2 0 0 1 2 2ZM10 9h4M12 6v3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
 								</div>
-								<div><h2>Storage</h2><p>Quota covers messages and attachments stored for your mailbox.</p></div>
+								<div><h2>{tt('settings.storageHeading')}</h2><p>{tt('settings.storageSubtitle')}</p></div>
 							</div>
 
 							{#if storageLoading}
-								<div class="storage-loading">Loading storage usage…</div>
+								<div class="storage-loading">{tt('common.loading')}</div>
 							{:else if storageError}
-								<div class="notice error" role="alert">{storageError} <button class="link-btn" type="button" onclick={loadStorage}>Retry</button></div>
+								<div class="notice error" role="alert">{storageError} <button class="link-btn" type="button" onclick={loadStorage}>{tt('common.retry')}</button></div>
 							{:else if storage}
 								<div class="storage-metric">
 									<div class="metric-head">
-										<strong>{formatBytes(storage.used_bytes)} <span class="of">of</span> {storage.quota_bytes ? formatBytes(storage.quota_bytes) : 'unlimited'}</strong>
+										<strong>{formatBytes(storage.used_bytes)} <span class="of">of</span> {storage.quota_bytes ? formatBytes(storage.quota_bytes) : tt('settings.storageQuotaUnlimited')}</strong>
 										<span class="pct">{Math.round(overallRatio * 100)}%</span>
 									</div>
 									<div class="bar" data-level={usageLevel}>
 										<div class="bar-fill" style="width: {Math.round(usedRatio * 100)}%"></div>
 									</div>
 									<div class="metric-sub">
-										<span>{formatCount(storage.message_count)} of {storage.quota_messages ? formatCount(storage.quota_messages) : '∞'} messages</span>
+										<span>{formatCount(storage.message_count)} / {storage.quota_messages ? formatCount(storage.quota_messages) : '∞'} {tt('settings.storageMessagesLabel')}</span>
 										<span class="dot" aria-hidden="true">·</span>
-										<span>{formatBytes(Math.max(storage.quota_bytes - storage.used_bytes, 0))} available</span>
+										<span>{formatBytes(Math.max(storage.quota_bytes - storage.used_bytes, 0))} {tt('settings.storageRemaining')}</span>
 									</div>
 								</div>
 
 								{#if usageLevel === 'high'}
 									<div class="notice error" role="alert">
-										Your mailbox is nearly full. Free up space by emptying Trash or deleting large messages — new mail will be rejected once the quota is reached.
+										{tt('mail.storageCritical')}
 									</div>
 								{:else if usageLevel === 'warn'}
 									<div class="notice warn" role="status">
-										You're approaching your storage limit. Consider clearing Trash soon.
+										{tt('mail.storageHigh')}
 									</div>
 								{/if}
 							{/if}

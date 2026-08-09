@@ -3,7 +3,10 @@ import { enhance } from '$app/forms';
 import { beforeNavigate } from '$app/navigation';
 import { onMount, untrack } from 'svelte';
 import { toastStore } from '$lib/toast';
+import { t, type Locale } from '$lib/i18n';
 let { data, form } = $props();
+const tt = (key: string, params?: Record<string, string | number>) =>
+	t(data.locale as Locale, key, params);
 let fileInput: HTMLInputElement;
 let files = $state<File[]>([]);
 let sending = $state(false);
@@ -121,21 +124,21 @@ function formatMB(bytes: number) {
 	}
 </script>
 
-<svelte:head><title>Compose · KRSZ Mail</title></svelte:head>
+<svelte:head><title>{tt('compose.title')} · {tt('common.brandName')}</title></svelte:head>
 
 <section class="page">
 	<header class="head">
-		<a class="back" href="/inbox" aria-label="Cancel and return to Inbox">
+		<a class="back" href="/inbox" aria-label={tt('message.backToInbox')}>
 			<svg viewBox="0 0 24 24" fill="none"><path d="m15 18-6-6 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
 		</a>
-		<div><p>Compose</p><h1>New message</h1></div>
+		<div><p>{tt('compose.title')}</p><h1>{draftId ? tt('compose.updateDraft') : tt('compose.title')}</h1></div>
 	</header>
 
 	{#if projectedUsage && (projectedUsage.overBytes || projectedUsage.overMessages)}
 		<div class="notice quota-warn" role="alert">
 			<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 9v4m0 4h.01M10.3 3.86c.77-1.36 2.63-1.36 3.4 0l8.45 14.86A2 2 0 0 1 20.4 22H3.6a2 2 0 0 1-1.75-3.28L10.3 3.86Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
 			<div>
-				<strong>Your mailbox will exceed its quota.</strong>
+				<strong>{tt('compose.storageWarning.bytes')}</strong>
 				<span>
 					{#if projectedUsage.overBytes}Storage: {formatMB(projectedUsage.projectedBytes)} of {storage?.quota_bytes ? formatMB(storage.quota_bytes) : '∞'}. {/if}
 					{#if projectedUsage.overMessages}Messages: {projectedUsage.projectedMessages.toLocaleString()} of {storage?.quota_messages ? storage.quota_messages.toLocaleString() : '∞'}.{/if}
@@ -154,7 +157,7 @@ function formatMB(bytes: number) {
 						// Message is on its way — stop autosaving and let the server-side
 						// action delete the draft.
 						sent = true;
-						toastStore.success('Message sent!');
+						toastStore.success(tt('toast.send.success'));
 						dirty = false;
 					} else if (result.type === 'failure') {
 						const data = result.data as { error?: string } | null;
@@ -163,14 +166,14 @@ function formatMB(bytes: number) {
 				};
 	}}>
 		<div class="address-fields">
-			<label class="field inline"><span>From</span><input type="text" value={data.user.email} disabled /></label>
-			<label class="field inline"><span>To</span><input type="text" name="to" bind:value={to} placeholder="friend@example.com" required autocomplete="off" /></label>
-			<label class="field inline subject"><span>Subject</span><input type="text" name="subject" bind:value={subject} placeholder="What is this about?" required /></label>
+			<label class="field inline"><span>{tt('compose.from')}</span><input type="text" value={data.user.email} disabled /></label>
+			<label class="field inline"><span>{tt('compose.to')}</span><input type="text" name="to" bind:value={to} placeholder={tt('compose.toPlaceholder')} required autocomplete="off" /></label>
+			<label class="field inline subject"><span>{tt('compose.subject')}</span><input type="text" name="subject" bind:value={subject} placeholder={tt('compose.subjectPlaceholder')} required /></label>
 		</div>
 
 		<label class="message-field">
-			<span class="sr-only">Message</span>
-			<textarea name="body" bind:value={text} rows="15" placeholder="Write your message…" required></textarea>
+			<span class="sr-only">{tt('compose.body')}</span>
+			<textarea name="body" bind:value={text} rows="15" placeholder={tt('compose.bodyPlaceholder')} required></textarea>
 		</label>
 
 		<input type="hidden" name="draft_id" value={draftId} />
@@ -188,16 +191,16 @@ function formatMB(bytes: number) {
 			ondrop={(event) => { event.preventDefault(); dragActive = false; if (event.dataTransfer) chooseFiles(event.dataTransfer.files); }}
 		>
 			<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m9 12 5-5a3 3 0 0 1 4 4l-7 7a5 5 0 0 1-7-7l7-7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-			<span>Attach files or drag them here</span><small>Up to 25 MB total</small>
+			<span>{tt('compose.attachmentsAdd')}</span><small>{tt('compose.maxAttachments')}</small>
 		</div>
 
 		{#if files.length}
-			<ul class="attachments" aria-label="Selected attachments">
+			<ul class="attachments" aria-label={tt('compose.attachmentsAria')}>
 				{#each files as file, index (`${file.name}-${file.size}`)}
 					<li>
 						<div class="file-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M6 3h8l4 4v14H6V3Zm8 0v5h4" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></div>
 						<div><strong>{file.name}</strong><span>{formatSize(file.size)}</span></div>
-						<button type="button" onclick={() => removeFile(index)} aria-label={`Remove ${file.name}`} title="Remove attachment">×</button>
+						<button type="button" onclick={() => removeFile(index)} aria-label={`${tt('compose.attachmentsRemove')}: ${file.name}`} title={tt('compose.attachmentsRemove')}>×</button>
 					</li>
 				{/each}
 			</ul>
@@ -208,20 +211,20 @@ function formatMB(bytes: number) {
 		<footer class="composer-footer">
 			<div class="footer-left">
 				<span class="draft-status" aria-live="polite">
-					{#if draftStatus === 'saving'}<span class="saving">Saving draft…</span>
-					{:else if draftStatus === 'saved'}<span class="saved">✓ Draft saved</span>
-					{:else if draftStatus === 'error'}<span class="status-error">Couldn't save draft</span>{/if}
+					{#if draftStatus === 'saving'}<span class="saving">{tt('compose.draftStatus.saving')}</span>
+					{:else if draftStatus === 'saved'}<span class="saved">✓ {tt('compose.draftStatus.saved')}</span>
+					{:else if draftStatus === 'error'}<span class="status-error">{tt('compose.draftStatus.error')}</span>{/if}
 				</span>
-				<span class="file-info" class:over-limit={totalSize > 26_214_400}>{files.length ? `${files.length} ${files.length === 1 ? 'file' : 'files'} · ${formatSize(totalSize)}` : 'No attachments'}</span>
+				<span class="file-info" class:over-limit={totalSize > 26_214_400}>{files.length ? `${tt('common.messageCount', { count: files.length })} · ${formatSize(totalSize)}` : tt('compose.noAttachments')}</span>
 			</div>
 			<div class="footer-actions">
-				<button type="button" class="btn save-draft" onclick={saveDraft} disabled={sent || !hasContent || draftStatus === 'saving'} title="Save this message as a draft that you can finish later">
+				<button type="button" class="btn save-draft" onclick={saveDraft} disabled={sent || !hasContent || draftStatus === 'saving'} title={tt('compose.saveDraft')}>
 					<svg viewBox="0 0 24 24" fill="none"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Zm-9 0V14h4v7" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M7 3v4h7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-					{draftId ? 'Update draft' : 'Save draft'}
+					{draftId ? tt('compose.updateDraft') : tt('compose.saveDraft')}
 				</button>
 				<button class="btn btn-primary send" type="submit" disabled={sending || totalSize > 26_214_400}>
 					<svg viewBox="0 0 24 24" fill="none"><path d="m21 3-7.5 18-3.1-7.4L3 10.5 21 3Zm-10.6 10.6L21 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-					{sending ? 'Sending…' : 'Send message'}
+					{sending ? tt('compose.sending') : tt('compose.send')}
 				</button>
 			</div>
 		</footer>

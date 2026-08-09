@@ -1,5 +1,6 @@
 // See https://svelte.dev/docs/kit/types#app.d.ts
 import type { KVNamespace, D1Database, R2Bucket } from '@cloudflare/workers-types';
+import type { Locale } from '$lib/i18n/locale';
 
 declare global {
 	namespace App {
@@ -9,6 +10,7 @@ declare global {
 				accountId: string;
 				role: 'admin' | 'user';
 			} | null;
+			locale: Locale;
 		}
 
 		interface Platform {

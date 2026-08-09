@@ -1,11 +1,18 @@
 <script lang="ts">
 	import '$lib/styles/global.css';
 	import { navigating } from '$app/state';
+	import { initLocale } from '$lib/i18n';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 
-	let { children } = $props();
+	let { data, children } = $props();
 	let showProgress = $state(false);
 	let progressTimer: ReturnType<typeof setTimeout> | null = null;
+
+	// Hydrate the client locale store from SSR-injected data on first load
+	// and after every navigation that changes the value.
+	$effect(() => {
+		if (data?.locale) initLocale(data.locale);
+	});
 
 	$effect(() => {
 		if (navigating.to) {

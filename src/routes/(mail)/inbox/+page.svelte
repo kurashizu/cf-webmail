@@ -1,25 +1,30 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-		import { invalidate } from '$app/navigation';
-		import { formatDate, initials } from '$lib/format';
-		import { toastStore } from '$lib/toast';
-		import Pager from '$lib/components/Pager.svelte';
+	import { invalidate } from '$app/navigation';
+	import { formatDate, initials } from '$lib/format';
+	import { toastStore } from '$lib/toast';
+	import Pager from '$lib/components/Pager.svelte';
+	import { t, type Locale } from '$lib/i18n';
 
 	let { data } = $props();
-		let messages = $state<any[]>([]);
-		let busy = $state<Set<string>>(new Set());
-		let actionError = $state('');
-		let refreshing = $state(false);
-		let lastUpdated = $state<Date | null>(null);
-		let newMessageCount = $state(0);
-		let previousIds = new Set<string>();
-		let currentPage = 0;
-		let selected = $state<Set<string>>(new Set());
-		let bulkBusy = $state(false);
-		let selectAllInput = $state<HTMLInputElement | null>(null);
-		let storageDismissed = $state(false);
-		let markAllReadBusy = $state(false);
-		let storage = $state<{ used_bytes: number; quota_bytes: number; message_count: number; quota_messages: number } | null>(null);
+	const tt = (key: string, params?: Record<string, string | number>) =>
+		t(data.locale as Locale, key, params);
+
+	let messages = $state<any[]>([]);
+	let busy = $state<Set<string>>(new Set());
+	let actionError = $state('');
+	let refreshing = $state(false);
+	let lastUpdated = $state<Date | null>(null);
+	let newMessageCount = $state(0);
+	let previousIds = new Set<string>();
+	let currentPage = 0;
+	let selected = $state<Set<string>>(new Set());
+	let bulkBusy = $state(false);
+	let selectAllInput = $state<HTMLInputElement | null>(null);
+	let storageDismissed = $state(false);
+	let markAllReadBusy = $state(false);
+	let storage = $state<{ used_bytes: number; quota_bytes: number; message_count: number; quota_messages: number } | null>(null);
+
 	const allSelected = $derived(messages.length > 0 && selected.size === messages.length);
 	const partiallySelected = $derived(selected.size > 0 && selected.size < messages.length);
 
@@ -40,19 +45,25 @@
 		markAllReadBusy = true;
 		try {
 			const ids = messages.filter((m) => isUnread(m)).map((m) => m.id);
-			if (!ids.length) { toastStore.info('All messages are already read.'); return; }
+			if (!ids.length) {
+				toastStore.info(tt('toast.markAllRead.allRead'));
+				return;
+			}
 			const response = await fetch('/api/messages/bulk', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({ ids, action: 'read' })
 			});
 			if (!response.ok) throw new Error();
-			messages = messages.map((m) => ({ ...m, flags: m.flags.includes('\\Seen') ? m.flags : [...m.flags, '\\Seen'] }));
+			messages = messages.map((m) => ({
+				...m,
+				flags: m.flags.includes('\\Seen') ? m.flags : [...m.flags, '\\Seen']
+			}));
 			selected = new Set();
 			await invalidate('/inbox');
-			toastStore.success(`${ids.length} ${ids.length === 1 ? 'message' : 'messages'} marked as read.`);
+			toastStore.success(tt('toast.markAllRead.success', { count: ids.length }));
 		} catch {
-			toastStore.error('Could not mark all as read. Please try again.');
+			toastStore.error(tt('toast.markAllRead.error'));
 		} finally {
 			markAllReadBusy = false;
 		}
@@ -67,60 +78,63 @@
 		}
 	}
 
-	function formatMB(bytes: number) { return `${(bytes / 1024 / 1024).toFixed(1)} MB`; }
+	function formatMB(bytes: number) {
+		return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+	}
 
-async function refreshInbox(manual = false) {
-			if (refreshing) return;
-			// Only refresh on the first page so the current page isn't clobbered.
-			if (data.pagination.page !== 1) return;
-			if (!manual && document.visibilityState !== 'visible') return;
-			refreshing = true;
-			if (manual) actionError = '';
-			try {
-				const resp = await fetch(`/api/inbox?page=${data.pagination.page}`);
-				if (!resp.ok) throw new Error();
-				const fresh = await resp.json() as { messages: any[] };
-				if (fresh && Array.isArray(fresh.messages)) {
-					const incoming = fresh.messages.filter((m: any) => previousIds.size > 0 && !previousIds.has(m.id));
-					if (incoming.length) newMessageCount += incoming.length;
-					previousIds = new Set(fresh.messages.map((m: any) => m.id));
-					messages = fresh.messages.map((m: any) => ({ ...m, flags: [...m.flags] }));
-					selected = new Set();
-				}
-				lastUpdated = new Date();
-				if (manual) toastStore.success('Inbox refreshed');
-			} catch {
-				if (manual) toastStore.error('Could not refresh Inbox. Please try again.');
-			} finally {
-				refreshing = false;
+	async function refreshInbox(manual = false) {
+		if (refreshing) return;
+		if (data.pagination.page !== 1) return;
+		if (!manual && document.visibilityState !== 'visible') return;
+		refreshing = true;
+		if (manual) actionError = '';
+		try {
+			const resp = await fetch(`/api/inbox?page=${data.pagination.page}`);
+			if (!resp.ok) throw new Error();
+			const fresh = (await resp.json()) as { messages: any[] };
+			if (fresh && Array.isArray(fresh.messages)) {
+				const incoming = fresh.messages.filter(
+					(m: any) => previousIds.size > 0 && !previousIds.has(m.id)
+				);
+				if (incoming.length) newMessageCount += incoming.length;
+				previousIds = new Set(fresh.messages.map((m: any) => m.id));
+				messages = fresh.messages.map((m: any) => ({ ...m, flags: [...m.flags] }));
+				selected = new Set();
 			}
+			lastUpdated = new Date();
+			if (manual) toastStore.success(tt('toast.inbox.refreshed'));
+		} catch {
+			if (manual) toastStore.error(tt('toast.inbox.refreshError'));
+		} finally {
+			refreshing = false;
 		}
+	}
 
 	onMount(() => {
-			lastUpdated = new Date();
-			loadStorageSnapshot();
-			const storageTimer = window.setInterval(loadStorageSnapshot, 60_000);
-			const timer = window.setInterval(() => refreshInbox(), 10_000);
-			const onVisible = () => { if (document.visibilityState === 'visible') refreshInbox(); };
-			document.addEventListener('visibilitychange', onVisible);
-			return () => {
-				window.clearInterval(timer);
-				window.clearInterval(storageTimer);
-				document.removeEventListener('visibilitychange', onVisible);
-			};
-		});
+		lastUpdated = new Date();
+		loadStorageSnapshot();
+		const storageTimer = window.setInterval(loadStorageSnapshot, 60_000);
+		const timer = window.setInterval(() => refreshInbox(), 10_000);
+		const onVisible = () => {
+			if (document.visibilityState === 'visible') refreshInbox();
+		};
+		document.addEventListener('visibilitychange', onVisible);
+		return () => {
+			window.clearInterval(timer);
+			window.clearInterval(storageTimer);
+			document.removeEventListener('visibilitychange', onVisible);
+		};
+	});
 
 	$effect(() => {
-			const source = data.messages;
-			// When the page changes, reseed tracking so older messages on another
-			// page are never reported as "new".
-			if (data.pagination.page !== currentPage) {
-				currentPage = data.pagination.page;
-				previousIds = new Set(source.map((message: any) => message.id));
-			}
-			messages = source.map((message: any) => ({ ...message, flags: [...message.flags] }));
-			selected = new Set();
-		});
+		const source = data.messages;
+		if (data.pagination.page !== currentPage) {
+			currentPage = data.pagination.page;
+			previousIds = new Set(source.map((message: any) => message.id));
+		}
+		messages = source.map((message: any) => ({ ...message, flags: [...message.flags] }));
+		selected = new Set();
+	});
 
 	$effect(() => {
 		if (selectAllInput) selectAllInput.indeterminate = partiallySelected;
@@ -128,7 +142,8 @@ async function refreshInbox(manual = false) {
 
 	function toggleSelected(id: string) {
 		const next = new Set(selected);
-		if (next.has(id)) next.delete(id); else next.add(id);
+		if (next.has(id)) next.delete(id);
+		else next.add(id);
 		selected = next;
 	}
 
@@ -138,26 +153,48 @@ async function refreshInbox(manual = false) {
 
 	async function bulkAction(action: string, folder?: string) {
 		if (!selected.size || bulkBusy) return;
-		bulkBusy = true; actionError = '';
+		bulkBusy = true;
+		actionError = '';
 		try {
-			const response = await fetch('/api/messages/bulk', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ids: [...selected], action, folder }) });
-			if (!response.ok) throw new Error(((await response.json().catch(() => ({}))) as { message?: string }).message || 'Bulk action failed.');
-			if (action === 'move') messages = messages.filter((message) => !selected.has(message.id));
-			else messages = messages.map((message) => selected.has(message.id) ? { ...message, flags: updateLocalFlags(message.flags, action) } : message);
-			selected = new Set(); await invalidate('/inbox');
-		} catch (error) { actionError = error instanceof Error ? error.message : 'Bulk action failed.'; }
-		finally { bulkBusy = false; }
+			const response = await fetch('/api/messages/bulk', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ ids: [...selected], action, folder })
+			});
+			if (!response.ok)
+				throw new Error(
+					((await response.json().catch(() => ({}))) as { message?: string }).message ||
+						tt('toast.bulk.error')
+				);
+			if (action === 'move')
+				messages = messages.filter((message) => !selected.has(message.id));
+			else
+				messages = messages.map((message) =>
+					selected.has(message.id)
+						? { ...message, flags: updateLocalFlags(message.flags, action) }
+						: message
+				);
+			selected = new Set();
+			await invalidate('/inbox');
+		} catch (error) {
+			actionError = error instanceof Error ? error.message : tt('toast.bulk.error');
+		} finally {
+			bulkBusy = false;
+		}
 	}
 
 	function updateLocalFlags(flags: string[], action: string) {
 		const flag = action === 'read' || action === 'unread' ? '\\Seen' : '\\Flagged';
 		const enabled = action === 'read' || action === 'star';
-		return enabled ? (flags.includes(flag) ? flags : [...flags, flag]) : flags.filter((item) => item !== flag);
+		return enabled
+			? flags.includes(flag)
+				? flags
+				: [...flags, flag]
+			: flags.filter((item) => item !== flag);
 	}
 	function isUnread(message: any) {
 		return !message.flags.includes('\\Seen');
 	}
-
 	function isStarred(message: any) {
 		return message.flags.includes('\\Flagged');
 	}
@@ -180,7 +217,7 @@ async function refreshInbox(manual = false) {
 			message.flags = result.flags;
 			await invalidate('/inbox');
 		} catch {
-			actionError = 'Could not update the message. Please try again.';
+			actionError = tt('toast.message.error');
 		} finally {
 			setBusy(message.id, false);
 		}
@@ -199,110 +236,258 @@ async function refreshInbox(manual = false) {
 			message.flags = result.flags;
 			await invalidate('/inbox');
 		} catch {
-			actionError = 'Could not update the message. Please try again.';
+			actionError = tt('toast.message.error');
 		} finally {
 			setBusy(message.id, false);
 		}
 	}
 
 	async function moveToTrash(message: any) {
-			if (busy.has(message.id)) return;
-			setBusy(message.id, true);
-			actionError = '';
-			try {
-				const response = await fetch(`/api/messages/${message.id}/move`, {
-					method: 'POST',
-					headers: { 'content-type': 'application/json' },
-					body: JSON.stringify({ folder: 'Trash' })
-				});
-				if (!response.ok) throw new Error();
-				messages = messages.filter((item) => item.id !== message.id);
-				await invalidate('/inbox');
-				toastStore.info('Moved to Trash');
-			} catch {
-				toastStore.error('Could not move the message to Trash.');
-			} finally {
-				setBusy(message.id, false);
-			}
+		if (busy.has(message.id)) return;
+		setBusy(message.id, true);
+		actionError = '';
+		try {
+			const response = await fetch(`/api/messages/${message.id}/move`, {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ folder: 'Trash' })
+			});
+			if (!response.ok) throw new Error();
+			messages = messages.filter((item) => item.id !== message.id);
+			await invalidate('/inbox');
+			toastStore.info(tt('toast.message.movedToTrash'));
+		} catch {
+			toastStore.error(tt('toast.message.moveToTrashError'));
+		} finally {
+			setBusy(message.id, false);
 		}
+	}
+
+	/** Format "X used · Y messages" line in the storage banner. */
+	function storageQuotaText(): string {
+		if (!storage) return '';
+		const used = formatMB(Number(storage.used_bytes || 0));
+		const total = storage.quota_bytes ? formatMB(storage.quota_bytes) : tt('settings.storageQuotaUnlimited');
+		const count = Number(storage.message_count || 0).toLocaleString();
+		const countLimit = storage.quota_messages
+			? storage.quota_messages.toLocaleString()
+			: '∞';
+		return `${used} / ${total} · ${count} / ${countLimit}`;
+	}
 </script>
 
-<svelte:head><title>Inbox · KRSZ Mail</title></svelte:head>
+<svelte:head>
+	<title>{tt('inbox.title')} · {tt('common.brandName')}</title>
+</svelte:head>
 
 <section class="page">
 	<header class="page-head">
 		<div>
-			<p class="eyebrow">Mailbox</p>
-			<h1>Inbox</h1>
+			<p class="eyebrow">{tt('nav.inbox')}</p>
+			<h1>{tt('inbox.title')}</h1>
 		</div>
 		<div class="head-actions">
-			<div class="sync-status" title={lastUpdated ? `Last updated ${lastUpdated.toLocaleTimeString()}` : 'Checking for mail'}>
-				<span class="dot" class:syncing={refreshing}></span>{refreshing ? 'Checking…' : 'Live'}
+			<div
+				class="sync-status"
+				title={lastUpdated
+					? tt('inbox.lastUpdated', { time: lastUpdated.toLocaleTimeString() })
+					: tt('inbox.checkingMail')}
+			>
+				<span class="dot" class:syncing={refreshing}></span>{refreshing
+					? tt('inbox.checking')
+					: tt('inbox.live')}
 			</div>
-			<button class="refresh" type="button" onclick={() => refreshInbox(true)} disabled={refreshing} aria-label="Refresh Inbox" title="Refresh Inbox">
-				<svg viewBox="0 0 24 24" fill="none"><path d="M20 7v5h-5M4 17v-5h5M18.4 10a7 7 0 0 0-12-3L4 9m16 6-2.4 2a7 7 0 0 1-12-3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+			<button
+				class="refresh"
+				type="button"
+				onclick={() => refreshInbox(true)}
+				disabled={refreshing}
+				aria-label={tt('inbox.refreshAria')}
+				title={tt('inbox.refreshAria')}
+			>
+				<svg viewBox="0 0 24 24" fill="none"
+					><path
+						d="M20 7v5h-5M4 17v-5h5M18.4 10a7 7 0 0 0-12-3L4 9m16 6-2.4 2a7 7 0 0 1-12-3"
+						stroke="currentColor"
+						stroke-width="1.7"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					/></svg
+				>
 			</button>
-			<button class="mark-all-read" type="button" onclick={markAllRead} disabled={markAllReadBusy} title="Mark all as read" aria-label="Mark all messages as read">
-				<svg viewBox="0 0 24 24" fill="none"><path d="M3 6h18v12H3V6Zm0 1 9 7 9-7" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+			<button
+				class="mark-all-read"
+				type="button"
+				onclick={markAllRead}
+				disabled={markAllReadBusy}
+				title={tt('inbox.markAllRead')}
+				aria-label={tt('inbox.markAllReadAria')}
+			>
+				<svg viewBox="0 0 24 24" fill="none"
+					><path
+						d="M3 6h18v12H3V6Zm0 1 9 7 9-7"
+						stroke="currentColor"
+						stroke-width="1.7"
+						stroke-linejoin="round"
+					/></svg
+				>
 			</button>
-			<span class="count">{messages.length} {messages.length === 1 ? 'message' : 'messages'}</span>
+			<span class="count">{tt('common.messageCount', { count: messages.length })}</span>
 		</div>
 	</header>
 
 	{#if storageLevel && !storageDismissed}
-			<div class="storage-banner" data-level={storageLevel} role="status">
-				<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 9v4m0 4h.01M10.3 3.86c.77-1.36 2.63-1.36 3.4 0l8.45 14.86A2 2 0 0 1 20.4 22H3.6a2 2 0 0 1-1.75-3.28L10.3 3.86Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-				<div>
-					<strong>{storageLevel === 'critical' ? 'Mailbox full — incoming mail will be rejected.' : 'Mailbox nearly full.'}</strong>
-					<span>
-						{#if storage}
-							{formatMB(Number(storage.used_bytes || 0))} of {storage.quota_bytes ? formatMB(storage.quota_bytes) : 'unlimited'} used ·
-							{Number(storage.message_count || 0).toLocaleString()} of {storage.quota_messages ? storage.quota_messages.toLocaleString() : '∞'} messages
-						{/if}
-					</span>
-				</div>
-				<a class="btn btn-ghost" href="/settings#storage">Manage</a>
-				<button type="button" aria-label="Dismiss" onclick={() => (storageDismissed = true)}>×</button>
+		<div class="storage-banner" data-level={storageLevel} role="status">
+			<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"
+				><path
+					d="M12 9v4m0 4h.01M10.3 3.86c.77-1.36 2.63-1.36 3.4 0l8.45 14.86A2 2 0 0 1 20.4 22H3.6a2 2 0 0 1-1.75-3.28L10.3 3.86Z"
+					stroke="currentColor"
+					stroke-width="1.7"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				/></svg
+			>
+			<div>
+				<strong>{storageLevel === 'critical' ? tt('mail.storageCritical') : tt('mail.storageHigh')}</strong>
+				<span>{storageQuotaText()}</span>
 			</div>
-		{/if}
+			<a class="btn btn-ghost" href="/settings#storage">{tt('common.manage')}</a>
+			<button type="button" aria-label={tt('common.dismiss')} onclick={() => (storageDismissed = true)}>×</button>
+		</div>
+	{/if}
 
-		{#if newMessageCount > 0}
-			<button class="new-mail" type="button" onclick={() => (newMessageCount = 0)}>
-				<svg viewBox="0 0 24 24" fill="none"><path d="M4 6h16v12H4V6Zm0 1 8 6 8-6" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
-				{newMessageCount} new {newMessageCount === 1 ? 'message' : 'messages'} received
-				<span>Dismiss</span>
-			</button>
-		{/if}
+	{#if newMessageCount > 0}
+		<button class="new-mail" type="button" onclick={() => (newMessageCount = 0)}>
+			<svg viewBox="0 0 24 24" fill="none"
+				><path
+					d="M4 6h16v12H4V6Zm0 1 8 6 8-6"
+					stroke="currentColor"
+					stroke-width="1.7"
+					stroke-linejoin="round"
+				/></svg
+			>
+			{tt('inbox.newMessages', { count: newMessageCount })}
+			<span>{tt('common.dismiss')}</span>
+		</button>
+	{/if}
 
 	{#if actionError}
 		<div class="action-error" role="alert">{actionError}</div>
 	{/if}
 
-		{#if messages.length > 0}<div class="bulk-bar card" class:has-selection={selected.size > 0}><label class="select-all" title="Select all messages"><input bind:this={selectAllInput} type="checkbox" checked={allSelected} onchange={toggleAll} /><span>{selected.size ? `${selected.size} selected` : 'Select all'}</span></label>{#if selected.size > 0}<div class="bulk-actions"><button disabled={bulkBusy} onclick={() => bulkAction('read')} title="Mark as read"><svg viewBox="0 0 24 24" fill="none"><path d="M3 6h18v12H3V6Zm0 1 9 7 9-7" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg><span>Read</span></button><button disabled={bulkBusy} onclick={() => bulkAction('unread')} title="Mark as unread"><svg viewBox="0 0 24 24" fill="none"><path d="M3 7h18v11H3V7Zm0 0 9 6 9-6" stroke="currentColor" stroke-width="1.7"/></svg><span>Unread</span></button><button disabled={bulkBusy} onclick={() => bulkAction('star')} title="Add star">☆<span>Star</span></button><button disabled={bulkBusy} onclick={() => bulkAction('unstar')} title="Remove star">★<span>Unstar</span></button><button class="trash" disabled={bulkBusy} onclick={() => bulkAction('move', 'Trash')} title="Move to Trash"><svg viewBox="0 0 24 24" fill="none"><path d="M5 7h14m-11 0 1 13h6l1-13m-6 4v5m4-5v5M9 7l1-3h4l1 3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>Trash</span></button></div>{/if}</div>{/if}
+	{#if messages.length > 0}
+		<div class="bulk-bar card" class:has-selection={selected.size > 0}>
+			<label class="select-all" title={tt('inbox.selectAll')}>
+				<input
+					bind:this={selectAllInput}
+					type="checkbox"
+					checked={allSelected}
+					onchange={toggleAll}
+				/>
+				<span>{selected.size
+					? tt('inbox.selectedCount', { count: selected.size })
+					: tt('inbox.selectAll')}</span>
+			</label>
+			{#if selected.size > 0}
+				<div class="bulk-actions">
+					<button
+						data-action="mark-read"
+						disabled={bulkBusy}
+						onclick={() => bulkAction('read')}
+						title={tt('inbox.markAsRead')}
+					>
+						<svg viewBox="0 0 24 24" fill="none"
+							><path
+								d="M3 6h18v12H3V6Zm0 1 9 7 9-7"
+								stroke="currentColor"
+								stroke-width="1.7"
+								stroke-linejoin="round"
+							/></svg
+						>
+						<span>{tt('inbox.bulkRead')}</span>
+					</button>
+					<button
+						data-action="mark-unread"
+						disabled={bulkBusy}
+						onclick={() => bulkAction('unread')}
+						title={tt('message.markUnread')}
+					>
+						<svg viewBox="0 0 24 24" fill="none"
+							><path
+								d="M3 7h18v11H3V7Zm0 0 9 6 9-6"
+								stroke="currentColor"
+								stroke-width="1.7"
+							/></svg
+						>
+						<span>{tt('inbox.bulkUnread')}</span>
+					</button>
+					<button
+						data-action="star"
+						disabled={bulkBusy}
+						onclick={() => bulkAction('star')}
+						title={tt('inbox.addStar')}
+					>
+						☆<span>{tt('inbox.bulkStar')}</span>
+					</button>
+					<button
+						data-action="unstar"
+						disabled={bulkBusy}
+						onclick={() => bulkAction('unstar')}
+						title={tt('inbox.removeStar')}
+					>
+						★<span>{tt('inbox.bulkUnstar')}</span>
+					</button>
+					<button
+						class="trash"
+						data-action="trash"
+						disabled={bulkBusy}
+						onclick={() => bulkAction('move', 'Trash')}
+						title={tt('inbox.moveToTrash')}
+					>
+						<svg viewBox="0 0 24 24" fill="none"
+							><path
+								d="M5 7h14m-11 0 1 13h6l1-13m-6 4v5m4-5v5M9 7l1-3h4l1 3"
+								stroke="currentColor"
+								stroke-width="1.7"
+								stroke-linecap="round"
+							/></svg
+						>
+						<span>{tt('inbox.bulkTrash')}</span>
+					</button>
+				</div>
+			{/if}
+		</div>
+	{/if}
 
-		{#if messages.length === 0}
+	{#if messages.length === 0}
 		<div class="empty">
 			<div class="empty-icon" aria-hidden="true">✉</div>
-			<h2>Your inbox is clear</h2>
-			<p>New messages sent to <code>{data.userEmail}</code> will appear here.</p>
+			<h2>{tt('inbox.empty.title')}</h2>
+			<p>{tt('inbox.empty.bodyBefore')}<code>{data.userEmail}</code>{tt('inbox.empty.bodyAfter')}</p>
 		</div>
 	{:else}
-		<ul class="list" aria-label="Inbox messages">
+		<ul class="list" aria-label={tt('inbox.title')}>
 			{#each messages as message (message.id)}
 				<li class="msg" class:unread={isUnread(message)} class:selected={selected.has(message.id)}>
-					<label class="row-select" aria-label={`Select ${message.subject}`}><input type="checkbox" checked={selected.has(message.id)} onchange={() => toggleSelected(message.id)} /></label>
+					<label class="row-select" aria-label={`Select ${message.subject}`}>
+						<input
+							type="checkbox"
+							checked={selected.has(message.id)}
+							onchange={() => toggleSelected(message.id)}
+						/>
+					</label>
 					<a href={`/inbox/${message.id}`} class="message-link" aria-label={`Open ${message.subject}`}>
 						<div class="avatar" aria-hidden="true">{initials(message.fromName || message.fromAddr)}</div>
 						<div class="meta">
 							<div class="line">
-								<span class="from">{message.fromName || message.fromAddr || 'Unknown sender'}</span>
+								<span class="from">{message.fromName || message.fromAddr || tt('inbox.unknownSender')}</span>
 								<span class="time">{formatDate(message.receivedAt)}</span>
 							</div>
 							<div class="subject">{message.subject}</div>
-							<div class="preview">{message.preview || 'No preview available'}</div>
+							<div class="preview">{message.preview || tt('inbox.noPreview')}</div>
 						</div>
 						{#if message.hasAttachments}
-							<span class="attachment" title="Has attachments" aria-label="Has attachments">⌕</span>
+							<span class="attachment" title={tt('inbox.hasAttachments')} aria-label={tt('inbox.hasAttachments')}>⌕</span>
 						{/if}
 					</a>
 					<div class="row-actions" aria-label="Message actions">
@@ -312,24 +497,27 @@ async function refreshInbox(manual = false) {
 							type="button"
 							disabled={busy.has(message.id)}
 							onclick={() => toggleStar(message)}
-							aria-label={isStarred(message) ? 'Remove star' : 'Add star'}
-							title={isStarred(message) ? 'Remove star' : 'Add star'}
+							aria-label={isStarred(message) ? tt('inbox.removeStar') : tt('inbox.addStar')}
+							title={isStarred(message) ? tt('inbox.removeStar') : tt('inbox.addStar')}
+							data-action="star"
 						>{isStarred(message) ? '★' : '☆'}</button>
 						<button
 							class="icon-button"
 							type="button"
 							disabled={busy.has(message.id)}
 							onclick={() => toggleRead(message)}
-							aria-label={isUnread(message) ? 'Mark as read' : 'Mark as unread'}
-							title={isUnread(message) ? 'Mark as read' : 'Mark as unread'}
+							aria-label={isUnread(message) ? tt('inbox.markAsRead') : tt('inbox.markAsUnread')}
+							title={isUnread(message) ? tt('inbox.markAsRead') : tt('inbox.markAsUnread')}
+							data-action="mark-unread"
 						>{isUnread(message) ? '○' : '●'}</button>
 						<button
 							class="icon-button danger"
 							type="button"
 							disabled={busy.has(message.id)}
 							onclick={() => moveToTrash(message)}
-							aria-label="Move to Trash"
-							title="Move to Trash"
+							aria-label={tt('inbox.moveToTrash')}
+							title={tt('inbox.moveToTrash')}
+							data-action="trash"
 						>×</button>
 					</div>
 				</li>
@@ -398,91 +586,38 @@ async function refreshInbox(manual = false) {
 		border-radius: 4px;
 		background: color-mix(in srgb, var(--bg-elevated) 78%, transparent);
 		cursor: pointer;
-		transition: border-color var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast);
 	}
-	.row-select input:hover, .select-all input:hover { border-color: var(--accent); }
-	.row-select input:focus-visible, .select-all input:focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: 2px; }
-	.row-select input:checked, .select-all input:checked, .select-all input:indeterminate {
-		border-color: var(--accent);
-		background-color: var(--accent);
-		box-shadow: inset 0 0 0 1px color-mix(in srgb, white 10%, transparent);
-	}
-	.row-select input:checked, .select-all input:checked {
-		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='m3.5 8 3 3 6-6' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-	}
-	.select-all input:indeterminate {
-		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8h8' fill='none' stroke='white' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
-	}
-	.bulk-bar { min-height: 47px; display: flex; align-items: center; gap: 14px; margin-bottom: 10px; padding: 7px 12px; overflow: hidden; }
-	.bulk-bar.has-selection { border-color: var(--accent-soft); }
-	.select-all { display: flex; flex: none; align-items: center; gap: 8px; color: var(--text-muted); font-size: 11px; cursor: pointer; }
-	.bulk-actions { min-width: 0; display: flex; flex: 1; align-items: center; gap: 3px; padding-left: 12px; border-left: 1px solid var(--border); overflow-x: auto; scrollbar-width: thin; }
-	.bulk-actions button { min-height: 31px; display: flex; flex: none; align-items: center; gap: 5px; padding: 5px 8px; border: 0; border-radius: 7px; background: transparent; color: var(--text-muted); font-size: 11px; white-space: nowrap; }
-	.bulk-actions button:hover:not(:disabled) { background: var(--bg-elevated); color: var(--text-primary); }
-	.bulk-actions button.trash:hover:not(:disabled) { color: var(--color-danger-bright); }
-	.bulk-actions svg { width: 16px; height: 16px; }
-	.bulk-actions button:disabled { opacity: .45; }
-	.msg:last-child { border-bottom: 0; }
-	.msg:hover, .msg:focus-within { background: var(--bg-card); }
-	.msg.unread { background: color-mix(in srgb, var(--accent-subtle) 42%, var(--bg-secondary)); }
-	.message-link { min-width: 0; display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: var(--space-3); padding: 14px 8px 14px 4px; color: inherit; }
-	.message-link:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-	.avatar { width: 40px; height: 40px; display: grid; place-items: center; flex: none; border: 1px solid var(--border); border-radius: 50%; background: var(--bg-elevated); color: var(--accent); font-size: 12px; font-weight: 700; }
+	.row-select input:checked, .select-all input:checked { background: var(--accent); border-color: var(--accent); }
+	.message-link { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 12px; padding: 12px 14px; color: inherit; min-width: 0; }
+	.message-link:hover { background: var(--bg-elevated); }
+	.avatar { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; background: var(--accent-subtle); color: var(--accent); font-family: var(--font-mono); font-size: 11px; font-weight: 700; flex: none; }
 	.meta { min-width: 0; }
-	.line { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); }
-	.from { min-width: 0; overflow: hidden; color: var(--text-secondary); font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
-	.unread .from, .unread .subject { color: var(--text-primary); font-weight: 650; }
-	.time { flex: none; color: var(--text-muted); font-size: 11px; }
-	.subject, .preview { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-	.subject { margin-top: 2px; color: var(--text-primary); font-size: 14px; }
-	.preview { margin-top: 2px; color: var(--text-muted); font-size: 12px; }
-	.attachment { color: var(--text-muted); font-size: 14px; }
-	.row-actions { display: flex; align-items: center; gap: 2px; padding: 0 12px 0 4px; opacity: .28; transition: opacity var(--transition-fast); }
-	.msg:hover .row-actions, .msg:focus-within .row-actions { opacity: 1; }
-	.icon-button { width: 32px; height: 32px; display: grid; place-items: center; padding: 0; border: 0; border-radius: var(--radius-md); background: transparent; color: var(--text-muted); cursor: pointer; font-size: 17px; transition: background var(--transition-fast), color var(--transition-fast); }
+	.line { display: flex; align-items: baseline; gap: 10px; }
+	.from { font-size: 13px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
+	.time { color: var(--text-muted); font-size: 11px; font-family: var(--font-mono); flex: none; }
+	.subject { margin-top: 3px; font-size: 13px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+	.preview { margin-top: 2px; font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+	.attachment { color: var(--accent); font-size: 14px; }
+	.row-actions { display: flex; align-items: center; gap: 4px; padding-right: 6px; opacity: 0; transition: opacity var(--transition-fast); }
+	.msg:hover .row-actions, .msg.unread .row-actions { opacity: 1; }
+	.icon-button { width: 28px; height: 28px; display: grid; place-items: center; border: 0; background: transparent; border-radius: var(--radius-sm); color: var(--text-muted); cursor: pointer; font-size: 14px; }
 	.icon-button:hover:not(:disabled) { background: var(--bg-elevated); color: var(--text-primary); }
-	.icon-button:focus-visible { outline: 2px solid var(--accent); }
-	.icon-button:disabled { cursor: wait; opacity: .45; }
-	.icon-button.star.active { color: var(--accent); opacity: 1; }
-	.icon-button.danger:hover:not(:disabled) { color: var(--color-danger); }
-
+	.icon-button:disabled { opacity: .4; cursor: wait; }
+	.icon-button.star.active { color: var(--accent); }
+	.icon-button.danger:hover { color: var(--color-danger); }
+	.bulk-bar { display: flex; align-items: center; gap: 12px; padding: 10px 14px; margin-bottom: var(--space-4); }
+	.bulk-bar.has-selection { border-color: var(--accent); }
+	.select-all { display: flex; align-items: center; gap: 9px; font-size: 12px; color: var(--text-secondary); cursor: pointer; }
+	.bulk-actions { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+	.bulk-actions button { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border: 0; background: transparent; border-radius: var(--radius-sm); color: var(--text-secondary); font-size: 12px; cursor: pointer; }
+	.bulk-actions button:hover:not(:disabled) { background: var(--bg-elevated); color: var(--text-primary); }
+	.bulk-actions button:disabled { opacity: .4; cursor: wait; }
+	.bulk-actions button.trash:hover { color: var(--color-danger); }
+	.bulk-actions button svg { width: 14px; height: 14px; }
+	.msg.unread .from, .msg.unread .subject { color: var(--text-primary); font-weight: 600; }
 	@media (max-width: 720px) {
-		.page { padding: var(--space-4) var(--space-3); }
-		.page-head { margin-bottom: var(--space-3); align-items: center; }
-		.page-head h1 { font-size: 24px; }
-		.head-actions { gap: 6px; }
-		.sync-status span:not(.dot) { display: none; }
-		.sync-status > span.dot { display: inline-block; }
-		.count { display: none; }
-		.storage-banner { padding: 10px 12px; font-size: 11px; gap: 10px; }
-		.storage-banner .btn { padding: 5px 10px; font-size: 10px; }
-		.storage-banner > button { width: 26px; height: 26px; }
-		.bulk-bar { padding: 6px 8px; gap: 8px; }
-		.bulk-actions { padding-left: 8px; gap: 1px; }
-		.bulk-actions button { padding: 6px 7px; min-height: 34px; }
-		.bulk-actions button span { display: none; }
-		.bulk-actions svg { width: 17px; height: 17px; }
-		.list { border-right: 0; border-left: 0; border-radius: 0; }
-		.msg { grid-template-columns: 36px minmax(0, 1fr) auto; }
-		.row-select { padding-left: 6px; }
-		.message-link { grid-template-columns: 38px minmax(0, 1fr) auto; padding: 12px 8px 12px 6px; gap: 10px; min-height: 60px; }
-		.avatar { width: 36px; height: 36px; font-size: 11px; }
-		.row-actions { padding-right: 6px; opacity: 1; gap: 1px; }
-		.icon-button { width: 36px; height: 36px; }
-		.icon-button.danger { display: none; }
-		.from { font-size: 13px; }
-		.subject { font-size: 13px; }
-		.preview { font-size: 11px; }
-		.empty { min-height: 280px; padding: var(--space-6); }
-	}
-
-	@media (max-width: 420px) {
-		.page { padding: var(--space-3) 10px; }
-		.bulk-bar { padding: 5px 6px; }
-		.bulk-actions { padding-left: 6px; }
-		.bulk-actions button { padding: 6px; }
-		.message-link { padding: 11px 4px 11px 4px; gap: 8px; }
-		.from { font-size: 12.5px; }
-		.subject { font-size: 12.5px; }
+		.row-actions { opacity: 1; }
+		.row-select { padding-left: 4px; }
+		.message-link { padding: 10px 10px; }
 	}
 </style>

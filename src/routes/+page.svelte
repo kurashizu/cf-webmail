@@ -1,58 +1,67 @@
 <script lang="ts">
 	import type { PageData } from './$types';
+	import { t } from '$lib/i18n';
+	import LanguagePicker from '$lib/components/LanguagePicker.svelte';
+
 	let { data }: { data: PageData } = $props();
+	const tt = (key: string, params?: Record<string, string | number>) =>
+		t(data.locale, key, params);
 </script>
 
 <svelte:head>
-	<title>KRSZ Mail — Your private address</title>
-	<meta name="description" content="A private, invite-only email service at krsz.in." />
+	<title>{tt('landing.metaTitle', { brand: tt('common.brandName') })}</title>
+	<meta name="description" content={tt('landing.metaDescription')} />
 </svelte:head>
 
 <main class="landing">
 	<div class="ambient" aria-hidden="true"></div>
 
 	<header>
-		<nav aria-label="Primary navigation">
-			<a href="/" class="brand" aria-label="KRSZ Mail home">
+		<nav aria-label={tt('nav.primary')}>
+			<a href="/" class="brand" aria-label={tt('landing.signInAria', { brand: tt('common.brandName') })}>
 				<img class="brand-mark" src="/brand-mark.svg" alt="" width="31" height="31" />
-				<span class="brand-name">KRSZ Mail</span>
+				<span class="brand-name">{tt('common.brandName')}</span>
 			</a>
-			<a href="/login" class="sign-in">Sign in</a>
+			<div class="nav-actions">
+				<LanguagePicker locale={data.locale} variant="compact" />
+				<a href="/login" class="sign-in">{tt('landing.signInButton')}</a>
+			</div>
 		</nav>
 	</header>
 
 	<section class="hero">
-		<div class="eyebrow">Private email by invitation</div>
-		<h1>Your place for<br /><em>thoughtful mail.</em></h1>
+		<div class="eyebrow">{tt('landing.eyebrow')}</div>
+		<h1>{tt('landing.heading1')}<br /><em>{tt('landing.heading1Emphasis')}</em></h1>
 		<p class="lead">
-			A simple, private mailbox with your own
-			<span class="address">@{data.domain}</span> address.
+			{tt('landing.lead')}
+			<span class="address">@{data.domain}</span>
+			{tt('landing.leadSuffix')}
 		</p>
 		<div class="actions">
-			<a href="/register" class="primary-action">I have an invitation</a>
+			<a href="/register" class="primary-action">{tt('landing.ctaInvitation')}</a>
 		</div>
 	</section>
 
-	<section class="principles" aria-label="What KRSZ Mail offers">
+	<section class="principles" aria-label={tt('landing.principlesHeading', { brand: tt('common.brandName') })}>
 		<div>
 			<span class="principle-number">01</span>
-			<h2>Personal</h2>
-			<p>An address that feels like yours, not another account on a crowded platform.</p>
+			<h2>{tt('landing.principle1Title')}</h2>
+			<p>{tt('landing.principle1Body')}</p>
 		</div>
 		<div>
 			<span class="principle-number">02</span>
-			<h2>Focused</h2>
-			<p>Read, write, and organize mail without feeds, ads, or unnecessary noise.</p>
+			<h2>{tt('landing.principle2Title')}</h2>
+			<p>{tt('landing.principle2Body')}</p>
 		</div>
 		<div>
 			<span class="principle-number">03</span>
-			<h2>Private</h2>
-			<p>Invite-only access keeps KRSZ Mail small, intentional, and independent.</p>
+			<h2>{tt('landing.principle3Title')}</h2>
+			<p>{tt('landing.principle3Body', { brand: tt('common.brandName') })}</p>
 		</div>
 	</section>
 
 	<footer>
-		<span>© 2026 KRSZ Mail</span>
+		<span>{tt('landing.footerCopyright', { brand: tt('common.brandName') })}</span>
 		<span><a href="/api-docs">API</a> · krsz.in</span>
 	</footer>
 </main>
@@ -67,6 +76,7 @@
 	.brand:hover { color: var(--text-primary); }
 	.brand-mark { width: 31px; height: 31px; border-radius: var(--radius-sm); object-fit: cover; border: 1px solid var(--accent-ring); }
 	.brand-name { font-size: 15px; font-weight: 650; letter-spacing: -.01em; }
+	.nav-actions { display: flex; align-items: center; gap: var(--space-3); }
 	.sign-in { padding: 9px 15px; border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-secondary); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 	.sign-in:hover { border-color: var(--accent); background: var(--accent-subtle); color: var(--accent); }
 	.hero { width: min(760px, calc(100% - 48px)); margin: auto; padding: 96px 0 112px; text-align: center; }
@@ -81,7 +91,7 @@
 	.principle-number { color: var(--accent); font-family: var(--font-mono); font-size: 10px; }
 	.principles h2 { margin: 12px 0 7px; font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
 	.principles p { margin: 0; color: var(--text-muted); font-size: 13px; line-height: 1.6; }
-	footer { width: min(1120px, calc(100% - 48px)); margin: 0 auto; padding: 23px 0 28px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; color: var(--text-muted); font-size: 11px; }
+	footer { width: min(1120px, calc(100% - 48px)); margin: 0 auto; padding: 23px 0 28px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: var(--space-4); color: var(--text-muted); font-size: 11px; flex-wrap: wrap; }
 	@media (max-width: 680px) {
 		nav { height: 72px; }
 		.hero { width: min(100% - 32px, 560px); padding: 78px 0 90px; }
