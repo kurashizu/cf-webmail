@@ -48,8 +48,8 @@
 		inset: 0;
 		pointer-events: none;
 		background:
-			radial-gradient(ellipse at 30% 20%, var(--accent-subtle) 0%, transparent 50%),
-			radial-gradient(ellipse at 70% 80%, rgba(255, 107, 53, 0.04) 0%, transparent 50%);
+			radial-gradient(ellipse at 30% 20%, var(--accent-subtle) 0%, transparent 55%),
+			radial-gradient(ellipse at 70% 80%, var(--accent-subtle) 0%, transparent 55%);
 		z-index: 0;
 	}
 
@@ -68,16 +68,16 @@
 	.logo-mark {
 		width: 32px;
 		height: 32px;
-		border-radius: 50%;
+		border-radius: var(--radius-sm);
 		object-fit: cover;
-		border: 1px solid rgba(255, 107, 53, 0.45);
+		border: 1px solid var(--accent-ring);
 	}
 
 	.brand-name {
-		font-size: 18px;
+		font-size: 15px;
 		font-weight: 700;
-		font-style: italic;
-		letter-spacing: 0.02em;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
 	}
 
 	main {
@@ -100,8 +100,9 @@
 
 	.card h1 {
 		margin: 0 0 var(--space-2);
-		font-size: 24px;
-		font-weight: 600;
+		font-size: 22px;
+		font-weight: 700;
+		letter-spacing: 0.04em;
 		color: var(--text-primary);
 	}
 

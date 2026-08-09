@@ -173,7 +173,7 @@
 <style>
 	.card { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg-card); }
 	.bulk-bar { min-height: 47px; display: flex; align-items: center; gap: 14px; margin-bottom: 10px; padding: 7px 12px; }
-	.bulk-bar.has-selection { border-color: rgba(255,107,53,.3); }
+	.bulk-bar.has-selection { border-color: var(--accent-soft); }
 	.select-all { display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 11px; cursor: pointer; }
 	.select-all input, .row-select input {
 		width: 16px;
@@ -210,7 +210,7 @@
 	.bulk-actions { display: flex; gap: 3px; padding-left: 12px; border-left: 1px solid var(--border); }
 	.bulk-actions button { padding: 7px 9px; border: 0; border-radius: 7px; background: transparent; color: var(--text-muted); font-size: 11px; }
 	.bulk-actions button:hover:not(:disabled) { background: var(--bg-elevated); color: var(--text-primary); }
-	.bulk-actions .danger:hover { color: #ff9292; }
+	.bulk-actions .danger:hover { color: var(--color-danger-bright); }
 	.bulk-actions button:disabled { opacity: .45; }
 	.page-head { display: flex; justify-content: space-between; align-items: end; margin-bottom: var(--space-5); }
 	.eyebrow { margin: 0 0 4px; color: var(--accent); font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
@@ -271,5 +271,5 @@
 			.storage-banner span { display: block; margin-top: 2px; font-size: 11px; opacity: .9; }
 			.storage-banner .btn { margin-left: auto; padding: 6px 12px; font-size: 11px; }
 			.storage-banner > button { width: 28px; height: 28px; border: 0; border-radius: 50%; background: transparent; color: inherit; font-size: 18px; opacity: .65; }
-			.storage-banner > button:hover { background: rgba(255,255,255,.06); opacity: 1; }
+			.storage-banner > button:hover { background: color-mix(in srgb, var(--text-primary) 8%, transparent); opacity: 1; }
 		</style>

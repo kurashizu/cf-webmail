@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { themeStore, applyTheme, type Theme } from '$lib/stores/theme';
 
-	const metaColor: Record<Theme, string> = { dark: '#0a0a0f', light: '#f3f3f8' };
+	const metaColor: Record<Theme, string> = { dark: '#090b10', light: '#edf1f5' };
 
 	let theme = $state<Theme>('dark');
 
@@ -44,7 +44,7 @@
 		width: 42px;
 		height: 42px;
 		border: 1px solid var(--border);
-		border-radius: 50%;
+		border-radius: var(--radius-sm);
 		background: var(--bg-card);
 		color: var(--text-secondary);
 		box-shadow: var(--shadow-md);
@@ -54,7 +54,7 @@
 	.theme-toggle:hover {
 		color: var(--accent);
 		border-color: var(--accent);
-		transform: translateY(-1px);
+		background: var(--accent-subtle);
 	}
 	.theme-toggle svg {
 		width: 21px;
