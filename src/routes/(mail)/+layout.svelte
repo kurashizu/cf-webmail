@@ -5,9 +5,27 @@
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import Toast from '$lib/components/Toast.svelte';
+	import LanguagePicker from '$lib/components/LanguagePicker.svelte';
 	import { registerMailShortcuts } from '$lib/shortcuts';
+	import { t, type Locale } from '$lib/i18n';
 
 	let { data, children } = $props();
+	const tt = (key: string, params?: Record<string, string | number>) =>
+		t(data.locale as Locale, key, params);
+
+	/** Map an IMAP folder name (stored in D1) to a localized display label. */
+	const FOLDER_KEY: Record<string, string> = {
+		INBOX: 'nav.inbox',
+		Starred: 'nav.starred',
+		Sent: 'nav.sent',
+		Drafts: 'nav.drafts',
+		Junk: 'nav.junk',
+		Trash: 'nav.trash'
+	};
+	function folderLabel(name: string): string {
+		const key = FOLDER_KEY[name];
+		return key ? tt(key) : name;
+	}
 
 	let searchQuery = $derived(page.url.pathname === '/search' ? page.url.searchParams.get('q') || '' : '');
 	let mobileMenuOpen = $state(false);
@@ -103,17 +121,19 @@
 				const replyLink = document.querySelector<HTMLAnchorElement>('a[href^="/compose?to="]');
 				if (replyLink) replyLink.click();
 			},
+			// Selectors use stable data-action attributes so keyboard shortcuts keep
+			// working when button titles are localised.
 			markUnread: () => {
-				document.querySelector<HTMLButtonElement>('button[title="Mark unread"]')?.click();
+				document.querySelector<HTMLButtonElement>('button[data-action="mark-unread"]')?.click();
 			},
 			star: () => {
-				document.querySelector<HTMLButtonElement>('button[title*="Star"]')?.click();
+				document.querySelector<HTMLButtonElement>('button[data-action="star"]')?.click();
 			},
 			trash: () => {
-				document.querySelector<HTMLButtonElement>('button[title="Move to Trash"]')?.click();
+				document.querySelector<HTMLButtonElement>('button[data-action="trash"]')?.click();
 			},
 			archive: () => {
-				document.querySelector<HTMLButtonElement>('button[title="Archive"]')?.click();
+				document.querySelector<HTMLButtonElement>('button[data-action="archive"]')?.click();
 			},
 			inbox: () => { goto('/inbox'); },
 			close: () => {
@@ -128,30 +148,31 @@
 <div class="app" class:transitioning class:menu-open={mobileMenuOpen}>
 	<Toast />
 	<header class="topbar">
-		<a href="/inbox" class="brand" aria-label="KRSZ Mail home">
+		<a href="/inbox" class="brand" aria-label={tt('landing.signInAria', { brand: tt('common.brandName') })}>
 			<img class="logo-mark" src="/brand-mark.svg" alt="" width="32" height="32" />
-			<span class="brand-name font-serif">KRSZ Mail</span>
+			<span class="brand-name font-serif">{tt('common.brandName')}</span>
 		</a>
 		<form class="top-search" action="/search" method="GET" role="search">
 			<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="m16.5 16.5 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-			<input bind:this={searchInputEl} name="q" value={searchQuery} maxlength="100" placeholder="Search mail (Ctrl+K)" aria-label="Search mail (Ctrl+K)" />
-			{#if searchQuery}<a class="clear-search" href="/search" aria-label="Clear search" title="Clear search">×</a>{/if}
+			<input bind:this={searchInputEl} name="q" value={searchQuery} maxlength="100" placeholder={tt('mail.searchPlaceholder')} aria-label={tt('mail.searchPlaceholder')} />
+			{#if searchQuery}<a class="clear-search" href="/search" aria-label={tt('mail.searchClear')} title={tt('mail.searchClear')}>×</a>{/if}
 		</form>
 		<div class="actions">
-			<a class="mobile-search" href="/search" aria-label="Search mail" title="Search mail">
+			<a class="mobile-search" href="/search" aria-label={tt('mail.searchPlaceholderShort')} title={tt('mail.searchPlaceholderShort')}>
 				<svg class="nav-icon" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="m16.5 16.5 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
 			</a>
 			<a href="/compose" class="btn btn-primary compose-btn">
 				<svg class="nav-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4L16.5 3.5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-				<span>Compose</span>
+				<span>{tt('nav.compose')}</span>
 			</a>
 			<div class="me">
 				<span class="email">{data.user.email}</span>
+				<LanguagePicker locale={data.locale as Locale} variant="compact" />
 			</div>
 			<button
 				type="button"
 				class="mobile-menu-btn"
-				aria-label="Open menu"
+				aria-label={mobileMenuOpen ? tt('nav.closeMenu') : tt('nav.openMenu')}
 				aria-expanded={mobileMenuOpen}
 				aria-controls="mobile-sheet"
 				onclick={() => (mobileMenuOpen = !mobileMenuOpen)}
@@ -177,7 +198,7 @@
 							{:else if folderIcon(f.name) === 'file'}<svg class="nav-icon" viewBox="0 0 24 24" fill="none"><path d="M6 3h8l4 4v14H6V3Zm8 0v5h4M9 13h6M9 17h5" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/></svg>
 							{:else if folderIcon(f.name) === 'alert'}<svg class="nav-icon" viewBox="0 0 24 24" fill="none"><path d="M12 9v4m0 4h.01M10.3 4.5 3.4 17a2 2 0 0 0 1.8 3h13.6a2 2 0 0 0 1.8-3L13.7 4.5a2 2 0 0 0-3.4 0Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
 							{:else}<svg class="nav-icon" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 11v6m6-6v6M6 7l1 14h10l1-14M9 7l1-4h4l1-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>{/if}
-							<span class="folder-name">{f.name === 'INBOX' ? 'Inbox' : f.name}</span>
+							<span class="folder-name">{folderLabel(f.name)}</span>
 						</span>
 						{#if f.unread_count > 0}
 							<span class="badge">{f.unread_count}</span>
@@ -188,16 +209,16 @@
 			<div class="sidebar-footer">
 				<a href="/settings" class="footer-link">
 					<svg class="nav-icon" viewBox="0 0 24 24" fill="none"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="currentColor" stroke-width="1.7"/><path d="m19.4 15 .1.1 1.1 1.7-2.8 2.8-1.7-1.1-.1-.1a8 8 0 0 1-2 .8V21h-4v-2.4a8 8 0 0 1-2-.8l-.1.1-1.7 1.1-2.8-2.8 1.1-1.7.1-.1a8 8 0 0 1-.8-2H3V8.5h2.4a8 8 0 0 1 .8-2l-.1-.1L5 4.7l2.8-2.8L9.5 3l.1.1a8 8 0 0 1 2-.8V0h4v2.4a8 8 0 0 1 2 .8l.1-.1L19.4 2l2.8 2.8-1.1 1.7-.1.1a8 8 0 0 1 .8 2H24v4h-2.4a8 8 0 0 1-.8 2Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" transform="scale(.82) translate(2.6 2.6)"/></svg>
-					<span>Settings</span>
+					<span>{tt('nav.settings')}</span>
 				</a>
 				<a href="/api-docs" class="footer-link">
 					<svg class="nav-icon" viewBox="0 0 24 24" fill="none"><path d="m8 7 5-5 5 5M13 2v14M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-					<span>API reference</span>
+					<span>{tt('nav.apiReference')}</span>
 				</a>
 				<form method="POST" action="/logout" class="footer-link footer-signout">
 					<button type="submit">
 						<svg class="nav-icon" viewBox="0 0 24 24" fill="none"><path d="M14 4h-7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h7M16 8l4 4-4 4M20 12H10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-						<span>Sign out</span>
+						<span>{tt('common.signOut')}</span>
 					</button>
 				</form>
 			</div>
@@ -208,22 +229,22 @@
 		</main>
 	</div>
 
-	<nav class="bottom-nav" aria-label="Quick navigation">
+	<nav class="bottom-nav" aria-label={tt('nav.quickNav')}>
 		{#each primaryFolders as f (f.name)}
 			<a class="bottom-item" class:active={isActive(f.name)} href={folderHref(f.name)}>
 				{#if folderIcon(f.name) === 'inbox'}<svg viewBox="0 0 24 24" fill="none"><path d="M4 5h16v14H4V5Zm0 9h4l2 3h4l2-3h4" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
 				{:else if folderIcon(f.name) === 'star'}<svg viewBox="0 0 24 24" fill="none"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-2.9-5.6 2.9 1.1-6.2L3 9.6l6.2-.9L12 3Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
 				{:else if folderIcon(f.name) === 'send'}<svg viewBox="0 0 24 24" fill="none"><path d="m21 3-7.5 18-3.1-7.4L3 10.5 21 3Zm-10.6 10.6L21 3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
 				{:else}<svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 11v6m6-6v6M6 7l1 14h10l1-14M9 7l1-4h4l1-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>{/if}
-				<span>{f.name === 'INBOX' ? 'Inbox' : f.name}</span>
+				<span>{folderLabel(f.name)}</span>
 				{#if f.unread_count > 0}<span class="bottom-badge">{f.unread_count}</span>{/if}
 			</a>
 		{/each}
 	</nav>
 
 	{#if mobileMenuOpen}
-		<button type="button" class="sheet-scrim" aria-label="Close menu" onclick={closeMobileMenu}></button>
-		<div id="mobile-sheet" class="sheet" role="dialog" aria-modal="true" aria-label="Folders menu">
+		<button type="button" class="sheet-scrim" aria-label={tt('nav.closeMenu')} onclick={closeMobileMenu}></button>
+		<div id="mobile-sheet" class="sheet" role="dialog" aria-modal="true" aria-label={tt('nav.foldersMenu')}>
 			<div class="sheet-grip" aria-hidden="true"></div>
 			<div class="sheet-account">
 				<span class="sheet-avatar" aria-hidden="true">{(data.user.email[0] || '?').toUpperCase()}</span>
@@ -242,7 +263,7 @@
 							{:else if folderIcon(f.name) === 'file'}<svg class="nav-icon" viewBox="0 0 24 24" fill="none"><path d="M6 3h8l4 4v14H6V3Zm8 0v5h4M9 13h6M9 17h5" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/></svg>
 							{:else if folderIcon(f.name) === 'alert'}<svg class="nav-icon" viewBox="0 0 24 24" fill="none"><path d="M12 9v4m0 4h.01M10.3 4.5 3.4 17a2 2 0 0 0 1.8 3h13.6a2 2 0 0 0 1.8-3L13.7 4.5a2 2 0 0 0-3.4 0Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
 							{:else}<svg class="nav-icon" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 11v6m6-6v6M6 7l1 14h10l1-14M9 7l1-4h4l1-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>{/if}
-							<span class="folder-name">{f.name === 'INBOX' ? 'Inbox' : f.name}</span>
+							<span class="folder-name">{folderLabel(f.name)}</span>
 						</span>
 						{#if f.unread_count > 0}<span class="badge">{f.unread_count}</span>{/if}
 					</a>
@@ -253,20 +274,20 @@
 				<a class="folder" href="/settings" onclick={closeMobileMenu}>
 					<span class="folder-main">
 						<svg class="nav-icon" viewBox="0 0 24 24" fill="none"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="currentColor" stroke-width="1.7"/><path d="m19.4 15 .1.1 1.1 1.7-2.8 2.8-1.7-1.1-.1-.1a8 8 0 0 1-2 .8V21h-4v-2.4a8 8 0 0 1-2-.8l-.1.1-1.7 1.1-2.8-2.8 1.1-1.7.1-.1a8 8 0 0 1-.8-2H3V8.5h2.4a8 8 0 0 1 .8-2l-.1-.1L5 4.7l2.8-2.8L9.5 3l.1.1a8 8 0 0 1 2-.8V0h4v2.4a8 8 0 0 1 2 .8l.1-.1L19.4 2l2.8 2.8-1.1 1.7-.1.1a8 8 0 0 1 .8 2H24v4h-2.4a8 8 0 0 1-.8 2Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" transform="scale(.82) translate(2.6 2.6)"/></svg>
-						<span class="folder-name">Settings</span>
+						<span class="folder-name">{tt('nav.settings')}</span>
 					</span>
 				</a>
 				<a class="folder" href="/api-docs" onclick={closeMobileMenu}>
 					<span class="folder-main">
 						<svg class="nav-icon" viewBox="0 0 24 24" fill="none"><path d="m8 7 5-5 5 5M13 2v14M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-						<span class="folder-name">API reference</span>
+						<span class="folder-name">{tt('nav.apiReference')}</span>
 					</span>
 				</a>
 				<form method="POST" action="/logout" class="sheet-logout">
 					<button type="submit" class="folder">
 						<span class="folder-main">
 							<svg class="nav-icon" viewBox="0 0 24 24" fill="none"><path d="M14 4h-7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h7M16 8l4 4-4 4M20 12H10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-							<span class="folder-name">Sign out</span>
+							<span class="folder-name">{tt('common.signOut')}</span>
 						</span>
 					</button>
 				</form>

@@ -1,10 +1,27 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
-		import { onMount } from 'svelte';
-		import { formatAddresses, formatDate, initials } from '$lib/format';
-		import { toastStore } from '$lib/toast';
-		import { themeStore } from '$lib/stores/theme';
+	import { onMount } from 'svelte';
+	import { formatAddresses, formatDate, initials } from '$lib/format';
+	import { toastStore } from '$lib/toast';
+	import { themeStore } from '$lib/stores/theme';
+	import { t, type Locale } from '$lib/i18n';
+
 	let { data } = $props();
+	const tt = (key: string, params?: Record<string, string | number>) =>
+		t(data.locale as Locale, key, params);
+
+	const FOLDER_KEY: Record<string, string> = {
+		INBOX: 'nav.inbox',
+		Starred: 'nav.starred',
+		Sent: 'nav.sent',
+		Drafts: 'nav.drafts',
+		Junk: 'nav.junk',
+		Trash: 'nav.trash'
+	};
+	function folderLabel(name: string): string {
+		const key = FOLDER_KEY[name];
+		return key ? tt(key) : name;
+	}
 
 	let bodyHtml = $state('');
 	let bodyText = $state('');
@@ -19,8 +36,12 @@
 	});
 	let frameHeight = $state(420);
 
-	const replySubject = $derived(/^re:/i.test(data.message.subject) ? data.message.subject : `Re: ${data.message.subject}`);
-	const replyHref = $derived(`/compose?to=${encodeURIComponent(data.message.fromAddr || '')}&subject=${encodeURIComponent(replySubject)}`);
+	const replySubject = $derived(
+		/^re:/i.test(data.message.subject) ? data.message.subject : `${tt('message.subjectPrefix')} ${data.message.subject}`
+	);
+	const replyHref = $derived(
+		`/compose?to=${encodeURIComponent(data.message.fromAddr || '')}&subject=${encodeURIComponent(replySubject)}`
+	);
 
 	async function loadBodies() {
 		loading = true;
@@ -28,7 +49,7 @@
 		try {
 			await Promise.all([fetchBody('html'), fetchBody('text')]);
 		} catch {
-			error = 'Failed to load the message body.';
+			error = tt('message.bodyError');
 		} finally {
 			loading = false;
 		}
@@ -133,56 +154,56 @@
 	}
 
 	async function toggleStar() {
-				if (actionBusy) return;
-				actionBusy = true;
-				error = null;
-				try {
-					const response = await fetch(`/api/messages/${data.message.id}/star`, { method: 'POST' });
-					if (!response.ok) throw new Error();
-					const result = (await response.json()) as { flags: string[] };
-					starred = result.flags.includes('\Flagged');
-					await invalidateAll();
-					toastStore.success(starred ? 'Starred' : 'Unstarred');
-				} catch {
-					toastStore.error('Failed to update the message.');
-				} finally {
-					actionBusy = false;
-				}
-			}
+		if (actionBusy) return;
+		actionBusy = true;
+		error = null;
+		try {
+			const response = await fetch(`/api/messages/${data.message.id}/star`, { method: 'POST' });
+			if (!response.ok) throw new Error();
+			const result = (await response.json()) as { flags: string[] };
+			starred = result.flags.includes('\Flagged');
+			await invalidateAll();
+			toastStore.success(starred ? tt('toast.message.starred') : tt('toast.message.unstarred'));
+		} catch {
+			toastStore.error(tt('message.failed'));
+		} finally {
+			actionBusy = false;
+		}
+	}
 
 	async function moveTo(folder: string) {
-				if (actionBusy) return;
-				actionBusy = true;
-				error = null;
-				try {
-					const response = await fetch(`/api/messages/${data.message.id}/move`, {
-						method: 'POST',
-						headers: { 'content-type': 'application/json' },
-						body: JSON.stringify({ folder })
-					});
-					if (!response.ok) throw new Error();
-					toastStore.info(folder === 'Trash' ? 'Moved to Trash' : `Moved to ${folder}`);
-					location.href = data.folderSlug === 'starred' ? '/starred' : '/inbox';
-				} catch {
-					toastStore.error('Failed to move the message.');
-					actionBusy = false;
-				}
-			}
+		if (actionBusy) return;
+		actionBusy = true;
+		error = null;
+		try {
+			const response = await fetch(`/api/messages/${data.message.id}/move`, {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ folder })
+			});
+			if (!response.ok) throw new Error();
+			toastStore.info(folder === 'Trash' ? tt('message.movedToTrash') : tt('message.movedToFolder', { folder }));
+			location.href = data.folderSlug === 'starred' ? '/starred' : '/inbox';
+		} catch {
+			toastStore.error(tt('message.failedMove'));
+			actionBusy = false;
+		}
+	}
 
 	async function markUnread() {
-				if (actionBusy) return;
-				actionBusy = true;
-				error = null;
-				try {
-					const response = await fetch(`/api/messages/${data.message.id}/read`, { method: 'DELETE' });
-					if (!response.ok) throw new Error();
-					toastStore.info('Marked as unread');
-					location.href = `/${data.folderSlug}`;
-				} catch {
-					toastStore.error('Failed to update the message.');
-					actionBusy = false;
-				}
-			}
+		if (actionBusy) return;
+		actionBusy = true;
+		error = null;
+		try {
+			const response = await fetch(`/api/messages/${data.message.id}/read`, { method: 'DELETE' });
+			if (!response.ok) throw new Error();
+			toastStore.info(tt('toast.message.markedUnread'));
+			location.href = `/${data.folderSlug}`;
+		} catch {
+			toastStore.error(tt('message.failed'));
+			actionBusy = false;
+		}
+	}
 
 	onMount(async () => {
 		const response = await fetch(`/api/messages/${data.message.id}/read`, { method: 'POST' });
@@ -200,23 +221,23 @@
 		</a>
 		<div class="toolbar-actions">
 			{#if data.message.hasHtml && data.message.hasText}
-				<div class="view-toggle" role="group" aria-label="Message view mode">
-					<button type="button" class:active={renderMode === 'html'} onclick={() => setRenderMode('html')}>HTML</button>
-					<button type="button" class:active={renderMode === 'text'} onclick={() => setRenderMode('text')}>Plain text</button>
+				<div class="view-toggle" role="group" aria-label={tt('message.viewModeAria')}>
+					<button type="button" class:active={renderMode === 'html'} onclick={() => setRenderMode('html')}>{tt('message.htmlView')}</button>
+					<button type="button" class:active={renderMode === 'text'} onclick={() => setRenderMode('text')}>{tt('message.textView')}</button>
 				</div>
 			{/if}
-			<a class="tool primary" href={replyHref} title="Reply">
-				<svg viewBox="0 0 24 24" fill="none"><path d="m9 8-5 4 5 4v-3h4a7 7 0 0 1 7 7v-2a9 9 0 0 0-9-9H9V8Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg><span>Reply</span>
+			<a class="tool primary" href={replyHref} title={tt('message.reply')}>
+				<svg viewBox="0 0 24 24" fill="none"><path d="m9 8-5 4 5 4v-3h4a7 7 0 0 1 7 7v-2a9 9 0 0 0-9-9H9V8Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg><span>{tt('message.reply')}</span>
 			</a>
-			<button class="tool" class:active={starred} onclick={toggleStar} disabled={actionBusy} title={starred ? 'Remove star' : 'Star message'}>
-				<svg viewBox="0 0 24 24" fill={starred ? 'currentColor' : 'none'}><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-2.9-5.6 2.9 1.1-6.2L3 9.6l6.2-.9L12 3Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg><span>{starred ? 'Starred' : 'Star'}</span>
+			<button class="tool" class:active={starred} onclick={toggleStar} disabled={actionBusy} title={starred ? tt('message.starRemove') : tt('message.starAdd')} data-action="star">
+				<svg viewBox="0 0 24 24" fill={starred ? 'currentColor' : 'none'}><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-2.9-5.6 2.9 1.1-6.2L3 9.6l6.2-.9L12 3Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg><span>{starred ? tt('message.starred') : tt('message.star')}</span>
 			</button>
-			<button class="tool" onclick={markUnread} disabled={actionBusy} title="Mark unread">
-				<svg viewBox="0 0 24 24" fill="none"><path d="M4 6h16v12H4V6Zm0 1 8 6 8-6" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><circle cx="18" cy="6" r="3" fill="currentColor"/></svg><span>Unread</span>
+			<button class="tool" onclick={markUnread} disabled={actionBusy} title={tt('message.markUnread')} data-action="mark-unread">
+				<svg viewBox="0 0 24 24" fill="none"><path d="M4 6h16v12H4V6Zm0 1 8 6 8-6" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><circle cx="18" cy="6" r="3" fill="currentColor"/></svg><span>{tt('message.markUnread')}</span>
 			</button>
 			{#if data.folder !== 'Trash'}
-				<button class="tool danger" onclick={() => moveTo('Trash')} disabled={actionBusy} title="Move to Trash">
-					<svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 11v6m6-6v6M6 7l1 14h10l1-14M9 7l1-4h4l1 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Delete</span>
+				<button class="tool danger" onclick={() => moveTo('Trash')} disabled={actionBusy} title={tt('inbox.moveToTrash')} data-action="trash">
+					<svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 11v6m6-6v6M6 7l1 14h10l1-14M9 7l1-4h4l1 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>{tt('common.delete')}</span>
 				</button>
 			{/if}
 		</div>
@@ -230,21 +251,21 @@
 			<div class="sender-row">
 				<div class="avatar" aria-hidden="true">{initials(data.message.fromName || data.message.fromAddr)}</div>
 				<div class="sender">
-					<div><strong>{data.message.fromName || data.message.fromAddr || 'Unknown sender'}</strong>{#if data.message.fromName}<span>&lt;{data.message.fromAddr}&gt;</span>{/if}</div>
-					<p>To {formatAddresses(data.message.to) || 'undisclosed recipients'}</p>
+					<div><strong>{data.message.fromName || data.message.fromAddr || tt('inbox.unknownSender')}</strong>{#if data.message.fromName}<span>&lt;{data.message.fromAddr}&gt;</span>{/if}</div>
+					<p>{tt('compose.to')} {formatAddresses(data.message.to) || tt('inbox.unknownRecipient')}</p>
 				</div>
 				<time datetime={new Date(data.message.receivedAt).toISOString()}>{formatDate(data.message.receivedAt)}</time>
 			</div>
-			{#if data.message.cc?.length}<div class="cc">Cc: {formatAddresses(data.message.cc)}</div>{/if}
+			{#if data.message.cc?.length}<div class="cc">{tt('compose.cc')}: {formatAddresses(data.message.cc)}</div>{/if}
 		</header>
 
 		{#if data.attachments.length}
-			<section class="attachments" aria-label="Attachments">
-				<div class="attachments-title"><svg viewBox="0 0 24 24" fill="none"><path d="m9 12 5-5a3 3 0 0 1 4 4l-7 7a5 5 0 0 1-7-7l7-7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>{data.attachments.length} {data.attachments.length === 1 ? 'attachment' : 'attachments'}</span></div>
+			<section class="attachments" aria-label={tt('message.attachmentsHeading')}>
+				<div class="attachments-title"><svg viewBox="0 0 24 24" fill="none"><path d="m9 12 5-5a3 3 0 0 1 4 4l-7 7a5 5 0 0 1-7-7l7-7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>{tt('common.messageCount', { count: data.attachments.length })}</span></div>
 				<div class="attachment-grid">{#each data.attachments as attachment (attachment.id)}
 					<a class="attachment-card" href="/api/messages/{data.message.id}/attachments/{attachment.id}">
 						<div><svg viewBox="0 0 24 24" fill="none"><path d="M6 3h8l4 4v14H6V3Zm8 0v5h4" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></div>
-						<span><strong>{attachment.filename || 'attachment'}</strong><small>{Math.max(1, Math.ceil((attachment.size || 0) / 1024))} KB</small></span>
+						<span><strong>{attachment.filename || tt('message.attachmentsHeading')}</strong><small>{Math.max(1, Math.ceil((attachment.size || 0) / 1024))} KB</small></span>
 						<svg class="download" viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
 					</a>
 				{/each}</div>
@@ -255,7 +276,7 @@
 			{#if loading}<div class="skeleton"><span></span><span></span><span></span><span></span></div>
 			{:else if renderMode === 'html' && data.message.hasHtml && bodyHtml}<iframe bind:this={bodyFrame} srcdoc={emailSrcdoc} title="Message body" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" style:height={`${frameHeight}px`} onload={resizeFrame}></iframe>
 			{:else if bodyText || data.message.hasText}<pre>{bodyText || ''}</pre>
-			{:else}<p class="empty">This message has no body.</p>{/if}
+			{:else}<p class="empty">{tt('inbox.noPreview')}</p>{/if}
 		</section>
 	</section>
 </article>

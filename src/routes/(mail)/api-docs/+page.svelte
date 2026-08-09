@@ -1,7 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { t, type Locale } from '$lib/i18n';
 
 	let { data } = $props();
+	const tt = (key: string, params?: Record<string, string | number>) =>
+		t(data.locale as Locale, key, params);
 
 	let activeSectionId = $state('');
 	let copyState = $state<'idle' | 'copied' | 'error'>('idle');
@@ -69,9 +72,9 @@
 	}
 
 	function authLabel(level: 'session' | 'admin' | 'public') {
-		if (level === 'public') return 'Public';
-		if (level === 'admin') return 'Admin only';
-		return 'Signed in';
+		if (level === 'public') return tt('apiDocs.authPublic');
+		if (level === 'admin') return tt('apiDocs.authAdmin');
+		return tt('apiDocs.authSession');
 	}
 
 	onMount(() => {
@@ -84,13 +87,13 @@
 </script>
 
 <svelte:head>
-	<title>{data.meta.title} · API reference</title>
+	<title>{data.meta.title} · {tt('apiDocs.title')}</title>
 	<meta name="description" content={data.meta.tagline} />
 </svelte:head>
 
 <section class="page">
 	<header class="page-head">
-		<p class="eyebrow">Developer reference</p>
+		<p class="eyebrow">{tt('apiDocs.eyebrow')}</p>
 		<h1>{data.meta.title}</h1>
 		<p class="subtitle">{data.meta.tagline}</p>
 	</header>
@@ -119,17 +122,17 @@
 						class:copied={copyState === 'copied'}
 						class:errored={copyState === 'error'}
 						onclick={copyJsonUrl}
-						aria-label="Copy JSON reference URL"
+						aria-label={tt('apiDocs.copyUrl')}
 					>
 						{#if copyState === 'copied'}
 							<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 12 4 4 10-10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-							Copied
+							{tt('apiDocs.copied')}
 						{:else if copyState === 'error'}
 							<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7"/><path d="M12 8v5m0 3h.01" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
 							Press ⌘/Ctrl+C
 						{:else}
 							<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-							Copy URL
+							{tt('apiDocs.copyUrl')}
 						{/if}
 					</button>
 				</div>

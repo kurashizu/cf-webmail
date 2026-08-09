@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { formatDate, initials } from '$lib/format';
+	import { t, type Locale } from '$lib/i18n';
 	let { data } = $props();
+	const tt = (key: string, params?: Record<string, string | number>) =>
+		t(data.locale as Locale, key, params);
 	let filtersOpen = $state(false);
 	let initialised = false;
 	$effect(() => {
@@ -19,11 +22,11 @@
 	].filter(Boolean).length);
 
 	function addressLabel(message: any) {
-		if (message.direction !== 'outbound') return message.fromName || message.fromAddr || 'Unknown sender';
+		if (message.direction !== 'outbound') return message.fromName || message.fromAddr || tt('inbox.unknownSender');
 		const recipients = message.to || [];
-		if (!recipients.length) return 'No recipients';
+		if (!recipients.length) return tt('inbox.noRecipients');
 		const first = recipients[0];
-		const label = first.name || first.addr || 'Unknown recipient';
+		const label = first.name || first.addr || tt('inbox.unknownRecipient');
 		return recipients.length > 1 ? `${label} +${recipients.length - 1}` : label;
 	}
 
@@ -32,14 +35,14 @@
 	}
 </script>
 
-<svelte:head><title>{data.query ? `Search: ${data.query}` : 'Search'} · KRSZ Mail</title></svelte:head>
+<svelte:head><title>{data.query ? `${tt('search.title')}: ${data.query}` : tt('search.title')} · {tt('common.brandName')}</title></svelte:head>
 
 <section class="page">
 	<header class="page-head">
 		<div>
-			<p class="eyebrow">Mailbox</p>
-			<h1>Search</h1>
-			{#if data.query || data.hasFilters}<p class="summary">{data.messages.length} {data.messages.length === 1 ? 'result' : 'results'}{data.query ? ` for “${data.query}”` : ' matching your filters'}</p>{/if}
+			<p class="eyebrow">{tt('nav.inbox')}</p>
+			<h1>{tt('search.title')}</h1>
+			{#if data.query || data.hasFilters}<p class="summary">{tt('search.resultsCount', { count: data.messages.length })}{data.query ? tt('search.resultsForQuery', { query: data.query }) : tt('search.resultsForFilters')}</p>{/if}
 		</div>
 	</header>
 
@@ -47,25 +50,25 @@
 		<div class="search-row">
 			<div class="query-field">
 				<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="m16.5 16.5 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-				<input name="q" value={data.query} maxlength="100" placeholder="Search by sender, recipient, subject, or message…" aria-label="Search mail" />
+				<input name="q" value={data.query} maxlength="100" placeholder={tt('search.placeholder')} aria-label={tt('search.aria')} />
 			</div>
 			<button class="filter-toggle" class:active={activeFilterCount > 0} type="button" onclick={() => (filtersOpen = !filtersOpen)} aria-expanded={filtersOpen}>
 				<svg viewBox="0 0 24 24" fill="none"><path d="M4 6h16M7 12h10m-7 6h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-				Filters {#if activeFilterCount}<span>{activeFilterCount}</span>{/if}
+				{tt('search.filtersButton')} {#if activeFilterCount}<span>{activeFilterCount}</span>{/if}
 			</button>
-			<button class="btn btn-primary" type="submit">Search</button>
+			<button class="btn btn-primary" type="submit">{tt('search.title')}</button>
 		</div>
 		{#if filtersOpen}
 			<div class="filters">
-				<label><span>Folder</span><select name="folder" value={data.filters.folder}><option value="all">All mail</option><option value="inbox">Inbox</option><option value="sent">Sent</option><option value="drafts">Drafts</option><option value="junk">Junk</option><option value="trash">Trash</option></select></label>
-				<label><span>Status</span><select name="status" value={data.filters.status}><option value="any">Read or unread</option><option value="unread">Unread</option><option value="read">Read</option></select></label>
-				<label><span>From date</span><input type="date" name="from" value={data.filters.from} /></label>
-				<label><span>To date</span><input type="date" name="to" value={data.filters.to} /></label>
+				<label><span>{tt('search.folderLabel')}</span><select name="folder" value={data.filters.folder}><option value="all">{tt('search.folderAll')}</option><option value="inbox">{tt('search.folderInbox')}</option><option value="sent">{tt('search.folderSent')}</option><option value="drafts">{tt('search.folderDrafts')}</option><option value="junk">{tt('search.folderJunk')}</option><option value="trash">{tt('search.folderTrash')}</option></select></label>
+				<label><span>{tt('search.statusLabel')}</span><select name="status" value={data.filters.status}><option value="any">{tt('search.statusAny')}</option><option value="unread">{tt('search.statusUnread')}</option><option value="read">{tt('search.statusRead')}</option></select></label>
+				<label><span>{tt('search.fromDate')}</span><input type="date" name="from" value={data.filters.from} /></label>
+				<label><span>{tt('search.toDate')}</span><input type="date" name="to" value={data.filters.to} /></label>
 				<div class="checks">
-					<label><input type="checkbox" name="starred" value="1" checked={data.filters.starred} /><span>Starred only</span></label>
-					<label><input type="checkbox" name="attachments" value="1" checked={data.filters.hasAttachments} /><span>Has attachments</span></label>
+					<label><input type="checkbox" name="starred" value="1" checked={data.filters.starred} /><span>{tt('search.starredOnly')}</span></label>
+					<label><input type="checkbox" name="attachments" value="1" checked={data.filters.hasAttachments} /><span>{tt('search.hasAttachments')}</span></label>
 				</div>
-				{#if activeFilterCount}<a class="reset" href={data.query ? `/search?q=${encodeURIComponent(data.query)}` : '/search'}>Reset filters</a>{/if}
+				{#if activeFilterCount}<a class="reset" href={data.query ? `/search?q=${encodeURIComponent(data.query)}` : '/search'}>{tt('search.resetFilters')}</a>{/if}
 			</div>
 		{/if}
 	</form>
@@ -73,33 +76,33 @@
 	{#if !data.query && !data.hasFilters}
 		<div class="empty">
 			<div class="empty-icon"><svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.7"/><path d="m16.5 16.5 4 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>
-			<h2>Find a message</h2>
-			<p>Search subjects, senders, recipients, and message previews.</p>
+			<h2>{tt('search.emptyTitle')}</h2>
+			<p>{tt('search.emptyBody')}</p>
 		</div>
 	{:else if data.messages.length === 0}
 		<div class="empty">
 			<div class="empty-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M5 5h14v14H5V5Zm3 3 8 8m0-8-8 8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>
-			<h2>No messages found</h2>
-			<p>Try a sender address, fewer words, or a different subject.</p>
+			<h2>{tt('search.emptyFilteredTitle')}</h2>
+			<p>{tt('search.emptyFilteredBody')}</p>
 		</div>
 	{:else}
-		<ul class="list" aria-label="Search results">
+		<ul class="list" aria-label={tt('search.resultsAria')}>
 			{#each data.messages as message (message.id)}
 				<li class="msg" class:unread={!message.flags.includes('\\Seen')}>
 					<a class="row" href={`/${folderSlug(message.folder)}/${message.id}`}>
 						<div class="avatar" aria-hidden="true">{initials(addressLabel(message))}</div>
 						<div class="meta">
 							<div class="line">
-								<span class="from">{message.direction === 'outbound' ? 'To: ' : ''}{addressLabel(message)}</span>
+								<span class="from">{message.direction === 'outbound' ? `${tt('compose.to')}: ` : ''}{addressLabel(message)}</span>
 								<span class="time">{formatDate(message.receivedAt)}</span>
 							</div>
 							<div class="subject">{message.subject}</div>
-							<div class="preview">{message.preview || 'No preview available'}</div>
+							<div class="preview">{message.preview || tt('inbox.noPreview')}</div>
 						</div>
 						<div class="indicators">
-							<span class="folder-tag">{message.folder === 'INBOX' ? 'Inbox' : message.folder}</span>
-							{#if message.flags.includes('\\Flagged')}<span class="star" title="Starred">★</span>{/if}
-							{#if message.hasAttachments}<svg viewBox="0 0 24 24" fill="none" aria-label="Has attachment"><path d="m9 12 5-5a3 3 0 0 1 4 4l-7 7a5 5 0 0 1-7-7l7-7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>{/if}
+							<span class="folder-tag">{message.folder === 'INBOX' ? tt('nav.inbox') : message.folder}</span>
+							{#if message.flags.includes('\\Flagged')}<span class="star" title={tt('folder.starred')}>★</span>{/if}
+							{#if message.hasAttachments}<svg viewBox="0 0 24 24" fill="none" aria-label={tt('inbox.hasAttachment')}><path d="m9 12 5-5a3 3 0 0 1 4 4l-7 7a5 5 0 0 1-7-7l7-7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>{/if}
 						</div>
 					</a>
 				</li>

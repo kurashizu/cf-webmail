@@ -1,25 +1,37 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import AuthShell from '$lib/components/AuthShell.svelte';
+	import { t, type Locale } from '$lib/i18n';
+	import LanguagePicker from '$lib/components/LanguagePicker.svelte';
+
 	let { data, form } = $props();
+	const tt = (key: string, params?: Record<string, string | number>) =>
+		t(data.locale, key, params);
 </script>
 
 <svelte:head>
-	<title>Create account · KRSZ Mail</title>
+	<title>{tt('auth.registerTitle')} · {tt('common.brandName')}</title>
 </svelte:head>
 
 <AuthShell
-	title="Create your mailbox"
-	subtitle={`Pick a local part to get ${data.domain ? 'your' : 'a'}@${data.domain} address`}
+	title={tt('auth.registerTitle')}
+	subtitle={tt('auth.registerSubtitle', { domain: data.domain })}
 >
+	{#snippet footer()}
+		<div class="footer-row">
+			<span class="footer-text">{tt('auth.hostingFooter')}</span>
+			<LanguagePicker locale={data.locale as Locale} variant="compact" />
+		</div>
+	{/snippet}
+
 	<form method="POST" use:enhance class="form">
 		<label class="field">
-			<span>Local part</span>
+			<span>{tt('auth.localPartLabel')}</span>
 			<div class="addr">
 				<input
 					type="text"
 					name="local_part"
-					placeholder="kurashizu"
+					placeholder={tt('auth.localPartPlaceholder')}
 					value={form?.localPart ?? ''}
 					required
 					autocomplete="off"
@@ -30,18 +42,18 @@
 		</label>
 
 		<label class="field">
-			<span>Display name (optional)</span>
+			<span>{tt('auth.displayNameLabel')}</span>
 			<input
 				type="text"
 				name="display_name"
-				placeholder="Kurashizu"
+				placeholder={tt('auth.displayNamePlaceholder')}
 				value={form?.displayName ?? ''}
 				autocomplete="name"
 			/>
 		</label>
 
 		<label class="field">
-			<span>Password (min 6 characters)</span>
+			<span>{tt('auth.passwordHint')}</span>
 			<input
 				type="password"
 				name="password"
@@ -52,26 +64,26 @@
 		</label>
 
 		<label class="field">
-			<span>Invite code</span>
+			<span>{tt('auth.inviteCodeLabel')}</span>
 			<input
 				type="text"
 				name="invite_code"
 				value={form?.inviteCode ?? data.inviteCode ?? ''}
 				required
 				autocomplete="off"
-				placeholder="paste the code from the admin"
+				placeholder={tt('auth.inviteCodePlaceholder')}
 			/>
-			<small>This server is invite-only. Ask the admin for a code.</small>
+			<small>{tt('auth.inviteHelp')}</small>
 		</label>
 
 		{#if form?.error}
 			<div class="error">{form.error}</div>
 		{/if}
 
-		<button type="submit" class="btn btn-primary submit">Create mailbox</button>
+		<button type="submit" class="btn btn-primary submit">{tt('auth.createMailboxCta')}</button>
 
 		<p class="hint">
-			Already have an account? <a href="/login">Sign in</a>
+			{tt('auth.alreadyHaveAccount')} <a href="/login">{tt('common.signIn')}</a>
 		</p>
 	</form>
 </AuthShell>
@@ -120,4 +132,16 @@
 		}
 	.hint { text-align: center; font-size: 13px; color: var(--text-muted); margin: 0; }
 	.hint a { color: var(--accent); }
+	.footer-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: var(--space-4);
+		flex-wrap: wrap;
+		width: 100%;
+	}
+	.footer-text {
+		font-size: 11px;
+		color: var(--text-muted);
+	}
 </style>
