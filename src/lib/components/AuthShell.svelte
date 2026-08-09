@@ -13,7 +13,7 @@
 
 	<header>
 		<a href="/" class="brand">
-			<img class="logo-mark" src="/favicon.ico" alt="" width="32" height="32" />
+			<img class="logo-mark" src="/brand-mark.svg" alt="" width="32" height="32" />
 			<span class="brand-name font-serif">KRSZ Mail</span>
 		</a>
 	</header>

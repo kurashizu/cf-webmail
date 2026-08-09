@@ -14,7 +14,7 @@
 	<header>
 		<nav aria-label="Primary navigation">
 			<a href="/" class="brand" aria-label="KRSZ Mail home">
-				<img class="brand-mark" src="/favicon.ico" alt="" width="31" height="31" />
+				<img class="brand-mark" src="/brand-mark.svg" alt="" width="31" height="31" />
 				<span class="brand-name">KRSZ Mail</span>
 			</a>
 			<a href="/login" class="sign-in">Sign in</a>
