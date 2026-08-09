@@ -33,8 +33,10 @@ R2: `cf-webmail-mail`
 ```
 src/
 ├── app.d.ts, app.html, env.d.ts
-├── hooks.server.ts                  # JWT auth, disabled-account check
+├── hooks.server.ts                  # JWT auth, locale detection, disabled-account check
 ├── routes/
+│   ├── +layout.svelte               # Root shell (theme + navigation progress bar)
+│   ├── +layout.server.ts            # Returns locale for SSR
 │   ├── +page.svelte                 # Landing
 │   ├── (auth)/{login,register}/
 │   ├── (mail)/
@@ -55,7 +57,10 @@ src/
 │       ├── trash/                   # Empty Trash + reconcile
 │       └── messages/{send,bulk,[id]/...}/
 └── lib/
-    ├── components/AuthShell.svelte
+    ├── components/{AuthShell,LanguagePicker,Pager,ThemeToggle,Toast}.svelte
+    ├── i18n/                        # Hand-rolled i18n — see "Internationalization" below
+    │   ├── locale.ts, index.ts, README.md
+    │   └── messages/{en,zh-CN,zh-TW,ja,ko}.ts
     ├── format.ts, types.ts
     ├── styles/{theme,global}.css
     └── server/
@@ -88,6 +93,10 @@ wrangler.jsonc                       # Bindings + cron "0 3 * * *"
 
 If you add TS-only syntax to one of these files, the worker bundle breaks at
 deploy (or silently at runtime). Keep them plain.
+
+The TypeScript files under `src/lib/i18n/`, by contrast, are compiled by the
+normal Vite/SvelteKit pipeline and are never bundled into `_worker.js`. Add
+TS syntax freely there.
 
 ## Quota system
 
@@ -136,6 +145,31 @@ needs an `id`, `method`, `path`, `summary`, `description`, `auth`
 (`'session' | 'admin' | 'public'`), and optionally `requestFields`,
 `responseExample`, and `notes`. Anything you don't write a description for
 should still get at least a one-line summary.
+
+## Internationalization
+
+Five locales ship today: `en` (default), `zh-CN`, `zh-TW`, `ja`, `ko`. The
+implementation lives under `src/lib/i18n/` and is documented in
+[`src/lib/i18n/README.md`](src/lib/i18n/README.md). At a glance:
+
+- `hooks.server.ts` picks the locale from the `krsz-lang` cookie first, then
+  the `Accept-Language` header, then defaults to `en`. The chosen locale is
+  injected into `<html lang="...">` via `transformPageChunk` so it lands
+  before any client JS runs.
+- `t(locale, key, params?)` returns a translated string; missing keys fall
+  back to English. `MessageKey` is auto-derived from `en.ts` so typos in any
+  translation file surface as TypeScript errors.
+- Each translation file is `Partial<typeof en>` — adding a new key to
+  `en.ts` does **not** require touching the other four files; untranslated
+  keys fall back at runtime.
+- Dev-mode diagnostic: when a translated page is loaded, the browser console
+  reports coverage per locale (e.g. `[i18n] zh-CN is missing 12/247
+  translations (95% coverage)`).
+- The language picker (`LanguagePicker.svelte`) lives in the landing nav,
+  auth-page footer, and mail topbar. It writes the cookie and reloads.
+
+When you add a new UI string, add the key to `en.ts` first; everything else
+flows from there.
 
 ## Cron
 
@@ -221,12 +255,12 @@ secret — don't commit it.
 
 ## Pre-existing svelte-check errors
 
-`pnpm run check` reports 30 TypeScript errors that are pre-existing in the
-codebase (mostly `requestJson(...)` returning `unknown` in admin pages and a
-couple of `event.dataTransfer` null checks). They were present before the
-quota work and are not introduced by recent changes. Don't try to "fix" them
-opportunistically — that's out of scope. If you add new code, follow the same
-patterns (don't introduce *new* errors).
+`pnpm run check` currently reports **0 errors, 0 warnings**. If a future
+change introduces errors, fix them before merging — don't paper over them.
+The previous note about "30 pre-existing errors" (mostly `requestJson(...)`
+returning `unknown` in admin pages and `event.dataTransfer` null checks) was
+retired when the admin/users page and a couple of drop-zone handlers were
+re-typed during the i18n and quota work.
 
 ## Validation checklist after edits
 
@@ -238,6 +272,9 @@ patterns (don't introduce *new* errors).
 4. If you touched `inbound.js` / `outbound.js` / `queries.js` / `storage.js`
    / `cron/maintenance.js`: deploy, then create a temp account and exercise
    the affected path (send, receive, empty trash, change quota, etc.).
+5. If you touched `src/lib/i18n/` or any UI text: verify at least one
+   non-English locale renders end-to-end (cookie `krsz-lang=ja` or
+   `Accept-Language: ja`). Hard-refresh once to bypass the CDN edge cache.
 
 ## License
 

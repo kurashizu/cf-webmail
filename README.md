@@ -46,6 +46,7 @@ Inbound mail and the application control plane run on Cloudflare. External outbo
 - [x] Compose-time quota projection warning before send
 - [x] Admin user management with quotas, invitations, profiles, roles, password resets, sessions, access, deletion
 - [x] Nightly cron: empty Trash older than 30 days, reconcile cached usage vs. reality
+- [x] Internationalization — `en` (default), `zh-CN`, `zh-TW`, `ja`, `ko` with cookie + `Accept-Language` detection, SSR-correct `<html lang>`, language picker in the UI
 
 ## Quotas
 
@@ -109,6 +110,11 @@ pnpm exec wrangler dev --port 8787 # simulates bindings locally
 sending. `CF_API_TOKEN` is needed for any future Email Routing rule management
 (a Cloudflare API token with `email_routing:write` scope).
 
+To test a non-English locale locally, set the `krsz-lang` cookie in the
+DevTools Application panel, or pass `--header "Accept-Language: ja"` to
+curl. `wrangler dev` reads the cookie / header on each request and re-renders
+SSR with the matching strings.
+
 ## Deployment
 
 ```bash
@@ -167,8 +173,10 @@ src/
 ├── app.d.ts                          # Platform types
 ├── app.html                          # HTML shell + fonts
 ├── env.d.ts                          # Worker Env interface
-├── hooks.server.ts                   # Auth guard, disabled-account check
+├── hooks.server.ts                   # Auth guard, locale detection, disabled-account check
 ├── routes/
+│   ├── +layout.svelte                # Root shell (theme + navigation progress)
+│   ├── +layout.server.ts             # Returns locale for SSR
 │   ├── +page.svelte                  # Landing
 │   ├── +page.server.ts
 │   ├── (auth)/
@@ -199,7 +207,10 @@ src/
 │               ├── move/
 │               └── attachments/{aid}/
 └── lib/
-    ├── components/AuthShell.svelte
+    ├── components/{AuthShell,LanguagePicker,Pager,ThemeToggle,Toast}.svelte
+    ├── i18n/                         # Hand-rolled, see "Internationalization" below
+    │   ├── locale.ts, index.ts, README.md
+    │   └── messages/{en,zh-CN,zh-TW,ja,ko}.ts
     ├── format.ts
     ├── types.ts
     ├── styles/{theme,global}.css
@@ -237,6 +248,43 @@ vite.config.ts                       # Injects email() + scheduled() handlers in
 That keeps `inbound.js` and `queries.js` as plain ESM (no TS-only syntax) so
 they bundle cleanly into the Workers runtime, while the rest of the codebase
 uses TypeScript through the standard SvelteKit / Vite pipeline.
+
+## Internationalization
+
+The UI ships in five locales: **English** (default), **简体中文**,
+**繁體中文**, **日本語**, **한국어**. All user-facing text in the Svelte
+components reads from `src/lib/i18n/messages/<locale>.ts`; the English
+file is the source of truth and the other four are typed `Partial<typeof en>`
+so adding a new key does not require touching every file.
+
+Detection order (in `hooks.server.ts`):
+
+1. `krsz-lang` cookie (set by the language picker)
+2. `Accept-Language` header (browser preference)
+3. Default: `en`
+
+The resolved locale is injected into `<html lang="...">` via
+`transformPageChunk` so the correct language is in the document before any
+client JS runs. The language picker (`LanguagePicker.svelte`) sits in the
+landing-page nav, the auth-page footer, and the mail topbar; selecting a
+locale writes the cookie and reloads.
+
+Adding a new UI string:
+
+1. Add the key to `src/lib/i18n/messages/en.ts`.
+2. (Optional) Add the translation in the other four locale files. Missing
+   translations fall back to English at runtime, and the browser console
+   logs per-locale coverage while a translated page is loaded.
+
+Adding a new locale:
+
+1. Create `src/lib/i18n/messages/<bcp47>.ts` typed as
+   `Partial<Record<keyof typeof en, string>>`.
+2. Add the code to `LOCALES`, `LOCALE_LABELS`, and `LOCALE_BCP47` in
+   `src/lib/i18n/locale.ts`.
+3. Register it in `src/lib/i18n/messages/index.ts`.
+
+Full maintenance notes live in [`src/lib/i18n/README.md`](src/lib/i18n/README.md).
 
 ## License
 
