@@ -10,13 +10,26 @@ src/lib/i18n/
 ├── locale.ts          # Locale type, BCP-47 mapping, Accept-Language parser
 ├── index.ts           # Client store, t(), setLocale(), initLocale()
 └── messages/
-    ├── index.ts       # MESSAGES table, MessageKey type, dev-mode coverage log
+    ├── index.ts       # MESSAGES table, MessageKey / MessageDictionary types
     ├── en.ts          # English — source of truth (all keys live here)
-    ├── zh-CN.ts       # Simplified Chinese — Partial<typeof en>
-    ├── zh-TW.ts       # Traditional Chinese — Partial<typeof en>
-    ├── ja.ts          # Japanese — Partial<typeof en>
-    └── ko.ts          # Korean — Partial<typeof en>
+    ├── zh-CN.ts       # Simplified Chinese — Partial<Dictionary>
+    ├── zh-TW.ts       # Traditional Chinese — Partial<Dictionary>
+    ├── ja.ts          # Japanese — Partial<Dictionary>
+    └── ko.ts          # Korean — Partial<Dictionary>
 ```
+
+Each translation file declares a local alias and uses it:
+
+```ts
+import type en from './en';
+type Dict = Partial<Record<keyof typeof en, string>>;
+const ko: Dict = { 'common.save': '저장', ... };
+export default ko;
+```
+
+Keys are still type-checked against `en.ts` (a typo in a translation key
+becomes a compile error); values are plain strings, so locale files don't
+need to mirror the English wording literally.
 
 The `t()` function takes an explicit locale parameter (no global state),
 so SSR and client rendering always agree.
@@ -51,12 +64,13 @@ The chosen locale is set on `event.locals.locale`, returned from each
 
 1. Add the BCP-47 code to `LOCALES` in `locale.ts`.
 2. Add a `LOCALE_LABELS` and `LOCALE_BCP47` entry.
-3. Create `messages/<bcp47>.ts` with `Partial<typeof en>` — copy the
-   header comment from one of the existing files and fill in keys.
+3. Create `messages/<bcp47>.ts` — copy the header comment + `type Dict = …`
+   boilerplate from one of the existing files and fill in keys.
 4. Import + register it in `messages/index.ts` (one import, one entry
-   in `MESSAGES`).
-5. Add the locale to the picker component's option list
-   (`src/lib/components/LanguagePicker.svelte`).
+   in the `MESSAGES` table).
+5. Add the locale code to the picker component's option list
+   (`src/lib/components/LanguagePicker.svelte` uses `LOCALES` directly, so
+   usually nothing to do — verify the picker renders the new entry).
 
 ## Adding a new message key
 
@@ -109,8 +123,8 @@ t(locale, 'storage.banner.bodyHigh', { bytesPercent: 92 });
   with translations missing; the i18n module logs coverage per locale.
 - **Type safety**: TypeScript will flag any misspelled key in a
   translation file because each file is typed as
-  `Partial<typeof en>`. Renaming a key in `en.ts` will produce
-  compile errors in every translation file that uses the old name.
+  `Partial<Record<keyof typeof en, string>>`. Renaming a key in `en.ts`
+  produces compile errors in every translation file that uses the old name.
 - **Adding formatters later**: if you need Intl plurals or relative
   time, add them as helpers alongside `t()` rather than as another
   library — keeps the bundle zero-dependency.
