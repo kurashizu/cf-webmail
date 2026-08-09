@@ -129,7 +129,7 @@
 	<Toast />
 	<header class="topbar">
 		<a href="/inbox" class="brand" aria-label="KRSZ Mail home">
-			<img class="logo-mark" src="/favicon.ico" alt="" width="32" height="32" />
+			<img class="logo-mark" src="/brand-mark.svg" alt="" width="32" height="32" />
 			<span class="brand-name font-serif">KRSZ Mail</span>
 		</a>
 		<form class="top-search" action="/search" method="GET" role="search">
