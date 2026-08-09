@@ -1,41 +1,56 @@
-/* Theme — dark surfaces with orange accent, mirroring blog.krsz.in */
+/* Theme — btop terminal: near-black canvas, hardware-teal accent, flat
+ * monospace chrome. All component styles keep their variable names, so this
+ * is a pure restyle: no markup or behaviour changes. */
 :root {
-	/* Surfaces */
-	--bg-primary: #0a0a0f;
-	--bg-secondary: #12121a;
-	--bg-card: #1a1a24;
-	--bg-elevated: #22222e;
+	/* Surfaces — graded dark boards */
+	--bg-primary: #090b10;
+	--bg-secondary: #0d1118;
+	--bg-card: #121722;
+	--bg-elevated: #1a212d;
 
-	/* Borders */
-	--border: #2a2a3a;
-	--border-hover: #3a3a4f;
+	/* Borders — crisp 1px terminal lines */
+	--border: #232c3b;
+	--border-hover: #38424e;
 
-	/* Text */
-	--text-primary: #e8e8ed;
-	--text-secondary: #9090a0;
-	--text-muted: #606070;
+	/* Text — cool gunmetal greys */
+	--text-primary: #d8e2eb;
+	--text-secondary: #96a4b1;
+	--text-muted: #56657a;
 
-	/* Accent — orange, matching the blog */
-		--accent: #ff6b35;
-		--accent-hover: #ff8555;
-		--accent-glow: rgba(255, 107, 53, 0.25);
-		--accent-subtle: rgba(255, 107, 53, 0.08);
+	/* Accent — phosphor teal, btop-style */
+	--accent: #4fd3b2;
+	--accent-hover: #6ee4c6;
+	--accent-glow: rgba(79, 211, 178, 0.28);
+	--accent-subtle: rgba(79, 211, 178, 0.07);
+	--accent-soft: rgba(79, 211, 178, 0.3);      /* accent-tinted borders */
+	--accent-ring: rgba(79, 211, 178, 0.45);     /* logo rings, focus dots */
 
-		/* Semantic — status colours */
-		--color-danger: #ff8888;
-		--color-danger-bright: #ff9292;
-		--color-danger-border: rgba(255, 80, 80, 0.3);
-		--color-danger-bg: rgba(255, 80, 80, 0.08);
-		--color-danger-subtle: rgba(255, 80, 80, 0.1);
-		--color-warning: #f5c97b;
-		--color-warning-border: rgba(245, 165, 36, 0.3);
-		--color-warning-bg: rgba(245, 165, 36, 0.08);
-		--color-warning-fg: #f5a524;
-		--color-success: #82d9a6;
-		--color-success-border: rgba(80, 200, 120, 0.3);
-		--color-success-bg: rgba(80, 200, 120, 0.08);
-		--color-star: #f5c542;
-		--color-online: #67c98b;
+	/* Semantic — status colours */
+	--color-danger: #ff9292;
+	--color-danger-bright: #ffa9a9;
+	--color-danger-border: rgba(255, 96, 96, 0.32);
+	--color-danger-bg: rgba(255, 96, 96, 0.08);
+	--color-danger-subtle: rgba(255, 96, 96, 0.1);
+	--color-warning: #e5c077;
+	--color-warning-border: rgba(240, 180, 76, 0.3);
+	--color-warning-bg: rgba(240, 180, 76, 0.08);
+	--color-warning-fg: #f0b44c;
+	--color-success: #5fe08a;
+	--color-success-border: rgba(95, 224, 138, 0.3);
+	--color-success-bg: rgba(95, 224, 138, 0.08);
+	--color-star: #f8d66a;
+	--color-online: #6fd193;
+	--color-violet: #a395f0;                     /* admin / API verb */
+
+	/* Glass — topbar + mobile bottom nav tinted per theme */
+	--glass-topbar: rgba(9, 11, 16, 0.78);
+	--glass-bottom: rgba(9, 11, 16, 0.94);
+
+	/* Typography — terminal mono everywhere */
+	--font-body: 'JetBrains Mono', ui-monospace, 'SF Mono', 'Cascadia Code',
+		'Fira Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+	--font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', 'Cascadia Code',
+		'Fira Mono', Menlo, Consolas, 'Liberation Mono', monospace;
 
 	/* Spacing */
 	--space-1: 4px;
@@ -48,11 +63,11 @@
 	--space-10: 40px;
 	--space-12: 48px;
 
-	/* Radii */
-	--radius-sm: 4px;
-	--radius-md: 8px;
-	--radius-lg: 12px;
-	--radius-xl: 16px;
+	/* Radii — flat, like a TUI */
+	--radius-sm: 0;
+	--radius-md: 0;
+	--radius-lg: 0;
+	--radius-xl: 0;
 	--radius-full: 9999px;
 
 	/* Transitions */
@@ -61,78 +76,86 @@
 	--transition-slow: 300ms ease;
 	--transition-spring: 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
 
-	/* Shadows */
-		--shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-		--shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
-		--shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
-		--shadow-glow: 0 0 30px var(--accent-glow);
-		--shadow-toast: 0 8px 32px rgba(0, 0, 0, 0.6);
+	/* Shadows — keep them hairline, no blurry glow */
+	--shadow-sm: 0 1px 0 rgba(0, 0, 0, 0.45);
+	--shadow-md: 0 1px 0 rgba(0, 0, 0, 0.5);
+	--shadow-lg: 0 2px 0 rgba(0, 0, 0, 0.55);
+	--shadow-glow: 0 0 0 1px var(--accent-soft);
+	--shadow-toast: 0 2px 0 rgba(0, 0, 0, 0.6);
 
-		/* Toast */
-		--toast-z: 100;
+	/* Toast */
+	--toast-z: 100;
 
 	/* Layout */
-		--shell-max: 1400px;
-		--sidebar-width: 240px;
-		--mail-list-width: 360px;
-		--header-height: 64px;
+	--shell-max: 1400px;
+	--sidebar-width: 240px;
+	--mail-list-width: 360px;
+	--header-height: 64px;
 
-		/* Animations */
-		--ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-		--ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-		--ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+	/* Animations */
+	--ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+	--ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+	--ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 }
 
-/* Light theme — switched via the HTML data-theme attribute (see app.html bootstrap). */
+/* Light theme — a hardened terminal-on-paper: same bones, inverted ink. */
 html[data-theme='light'] {
 	/* Surfaces */
-	--bg-primary: #f3f3f8;
-	--bg-secondary: #ffffff;
-	--bg-card: #f1f1f7;
-	--bg-elevated: #e8e8f0;
+	--bg-primary: #edf1f5;
+	--bg-secondary: #f6f8fa;
+	--bg-card: #ffffff;
+	--bg-elevated: #e7ecf1;
 
 	/* Borders */
-	--border: #d9d9e3;
-	--border-hover: #c2c2d4;
+	--border: #c7d1db;
+	--border-hover: #9fb0bf;
 
 	/* Text */
-	--text-primary: #1a1a22;
-	--text-secondary: #4f4f5c;
-	--text-muted: #8a8a9a;
+	--text-primary: #17222c;
+	--text-secondary: #4c5b6a;
+	--text-muted: #7e8c99;
 
-	/* Accent — slightly deepened orange for contrast on white */
-	--accent: #e8581c;
-	--accent-hover: #d04a13;
-	--accent-glow: rgba(232, 88, 28, 0.22);
-	--accent-subtle: rgba(232, 88, 28, 0.10);
+	/* Accent — pine-teal for contrast on paper */
+	--accent: #0f8f6f;
+	--accent-hover: #0b7358;
+	--accent-glow: rgba(15, 143, 111, 0.2);
+	--accent-subtle: rgba(15, 143, 111, 0.08);
+	--accent-soft: rgba(15, 143, 111, 0.3);
+	--accent-ring: rgba(15, 143, 111, 0.4);
 
 	/* Semantic */
-	--color-danger: #c0392b;
-	--color-danger-bright: #d64541;
-	--color-danger-border: rgba(192, 57, 43, 0.35);
-	--color-danger-bg: rgba(192, 57, 43, 0.08);
-	--color-danger-subtle: rgba(192, 57, 43, 0.12);
-	--color-warning: #8a5a10;
-	--color-warning-border: rgba(178, 116, 20, 0.35);
-	--color-warning-bg: rgba(178, 116, 20, 0.10);
-	--color-warning-fg: #b26c13;
-	--color-success: #2e7d4f;
-	--color-success-border: rgba(46, 125, 79, 0.35);
-	--color-success-bg: rgba(46, 125, 79, 0.10);
-	--color-star: #c79100;
+	--color-danger: #c23a3e;
+	--color-danger-bright: #d14b4f;
+	--color-danger-border: rgba(194, 58, 62, 0.32);
+	--color-danger-bg: rgba(194, 58, 62, 0.07);
+	--color-danger-subtle: rgba(194, 58, 62, 0.1);
+	--color-warning: #7d6416;
+	--color-warning-border: rgba(176, 137, 26, 0.32);
+	--color-warning-bg: rgba(176, 137, 26, 0.09);
+	--color-warning-fg: #9a740f;
+	--color-success: #1f8a54;
+	--color-success-border: rgba(31, 138, 84, 0.32);
+	--color-success-bg: rgba(31, 138, 84, 0.08);
+	--color-star: #a87f00;
+	--color-online: #22804f;
+	--color-violet: #6f5bd0;
+
+	/* Glass */
+	--glass-topbar: rgba(246, 248, 250, 0.82);
+	--glass-bottom: rgba(246, 248, 250, 0.95);
 
 	/* Shadows */
-	--shadow-sm: 0 1px 3px rgba(20, 20, 40, 0.08);
-	--shadow-md: 0 4px 16px rgba(20, 20, 40, 0.10);
-	--shadow-lg: 0 8px 32px rgba(20, 20, 40, 0.12);
-	--shadow-toast: 0 8px 32px rgba(20, 20, 40, 0.14);
+	--shadow-sm: 0 1px 0 rgba(23, 34, 44, 0.08);
+	--shadow-md: 0 1px 0 rgba(23, 34, 44, 0.1);
+	--shadow-lg: 0 2px 0 rgba(23, 34, 44, 0.12);
+	--shadow-toast: 0 2px 0 rgba(23, 34, 44, 0.14);
 
 	color-scheme: light;
 }
 
-/* Sticky bars that hardcode dark glases — retint in light mode. */
-html[data-theme='light'] .topbar { background: rgba(255, 255, 255, 0.78); }
-html[data-theme='light'] .bottom-nav { background: rgba(255, 255, 255, 0.92); }
+/* Sticky bars — now token-driven so both themes get their own glass. */
+html[data-theme='light'] .topbar { background: var(--glass-topbar); }
+html[data-theme='light'] .bottom-nav { background: var(--glass-bottom); }
 
 :root {
 	color-scheme: dark;

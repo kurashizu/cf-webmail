@@ -368,12 +368,12 @@
 		height: 13px;
 	}
 	.copy-btn.copied {
-		border-color: rgba(80, 200, 120, 0.4);
-		color: #82d9a6;
+		border-color: var(--color-success-border);
+		color: var(--color-success);
 	}
 	.copy-btn.errored {
-		border-color: rgba(255, 80, 80, 0.35);
-		color: #ff9b9b;
+		border-color: var(--color-danger-border);
+		color: var(--color-danger);
 	}
 
 	.snippet {
@@ -470,14 +470,14 @@
 		min-width: 18px;
 		padding: 1px 6px;
 		border-radius: 999px;
-		background: rgba(255, 255, 255, 0.08);
+		background: color-mix(in srgb, var(--text-secondary) 14%, transparent);
 		color: inherit;
 		font-size: 10px;
 		font-weight: 700;
 		text-align: center;
 	}
 	.tab.active .tab-count {
-		background: rgba(0, 0, 0, 0.2);
+		background: color-mix(in srgb, var(--bg-primary) 30%, transparent);
 	}
 
 	.panel {
@@ -546,20 +546,20 @@
 		text-transform: uppercase;
 	}
 	.verb.get {
-		background: rgba(80, 200, 120, 0.14);
-		color: #82d9a6;
+		background: var(--color-success-bg);
+		color: var(--color-success);
 	}
 	.verb.post {
-		background: rgba(255, 107, 53, 0.14);
+		background: var(--accent-subtle);
 		color: var(--accent);
 	}
 	.verb.delete {
-		background: rgba(255, 80, 80, 0.14);
-		color: #ff9b9b;
+		background: var(--color-danger-bg);
+		color: var(--color-danger);
 	}
 	.verb.put {
-		background: rgba(140, 130, 250, 0.14);
-		color: #b9b3f7;
+		background: color-mix(in srgb, var(--color-violet) 14%, transparent);
+		color: var(--color-violet);
 	}
 	.verb.other {
 		background: var(--bg-elevated);
@@ -587,15 +587,15 @@
 	}
 	.auth-tag[data-level='session'] {
 		color: var(--accent);
-		border-color: rgba(255, 107, 53, 0.3);
+		border-color: var(--accent-soft);
 	}
 	.auth-tag[data-level='admin'] {
-		color: #f5a524;
-		border-color: rgba(245, 165, 36, 0.35);
+		color: var(--color-warning-fg);
+		border-color: var(--color-warning-border);
 	}
 	.auth-tag[data-level='public'] {
-		color: #82d9a6;
-		border-color: rgba(80, 200, 120, 0.3);
+		color: var(--color-success);
+		border-color: var(--color-success-border);
 	}
 	.summary {
 		margin: 0;
@@ -667,7 +667,7 @@
 		margin-left: 6px;
 		padding: 1px 6px;
 		border-radius: 999px;
-		background: rgba(255, 107, 53, 0.16);
+		background: var(--accent-subtle);
 		color: var(--accent);
 		font-size: 9px;
 		font-weight: 700;

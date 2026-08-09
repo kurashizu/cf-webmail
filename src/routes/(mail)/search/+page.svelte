@@ -123,7 +123,7 @@
 	.filter-toggle { height: 36px; display: inline-flex; align-items: center; gap: 7px; padding: 0 10px; border-radius: var(--radius-md); color: var(--text-secondary); font-size: 12px; }
 	.filter-toggle:hover, .filter-toggle.active { background: var(--accent-subtle); color: var(--accent); }
 	.filter-toggle svg { width: 16px; }
-	.filter-toggle span { min-width: 17px; padding: 1px 5px; border-radius: var(--radius-full); background: var(--accent); color: white; font-size: 9px; text-align: center; }
+	.filter-toggle span { min-width: 17px; padding: 1px 5px; border-radius: var(--radius-full); background: var(--accent); color: var(--bg-primary); font-size: 9px; text-align: center; }
 	.filters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 11px; margin-top: 5px; padding: 14px 9px 9px; border-top: 1px solid var(--border); }
 	.filters > label { display: grid; gap: 5px; }
 	.filters > label > span { color: var(--text-muted); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }

@@ -291,7 +291,7 @@
 		z-index: 50;
 		backdrop-filter: blur(12px);
 		-webkit-backdrop-filter: blur(12px);
-		background: rgba(10, 10, 15, 0.7);
+		background: var(--glass-topbar);
 		border-bottom: 1px solid var(--border);
 		display: flex;
 		align-items: center;
@@ -310,16 +310,16 @@
 	.logo-mark {
 		width: 32px;
 		height: 32px;
-		border-radius: 50%;
+		border-radius: var(--radius-sm);
 		object-fit: cover;
-		border: 1px solid rgba(255, 107, 53, 0.45);
+		border: 1px solid var(--accent-ring);
 	}
 
 	.brand-name {
-		font-size: 18px;
+		font-size: 15px;
 		font-weight: 700;
-		font-style: italic;
-		letter-spacing: 0.02em;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
 	}
 
 	.top-search {
@@ -634,7 +634,7 @@
 			right: 0;
 			z-index: 45;
 			padding: 6px 6px calc(env(safe-area-inset-bottom, 0px) + 6px);
-			background: rgba(10, 10, 15, 0.92);
+			background: var(--glass-bottom);
 			backdrop-filter: blur(16px);
 			-webkit-backdrop-filter: blur(16px);
 			border-top: 1px solid var(--border);
@@ -705,8 +705,8 @@
 			max-height: 80dvh;
 			padding: 8px 14px calc(env(safe-area-inset-bottom, 0px) + 14px);
 			background: var(--bg-secondary);
-			border-top-left-radius: 22px;
-			border-top-right-radius: 22px;
+			border-top-left-radius: var(--radius-md);
+			border-top-right-radius: var(--radius-md);
 			border-top: 1px solid var(--border);
 			box-shadow: 0 -10px 50px rgba(0, 0, 0, 0.5);
 			animation: sheet-up var(--transition-spring);
@@ -732,7 +732,7 @@
 			place-items: center;
 			width: 40px;
 			height: 40px;
-			border-radius: 50%;
+			border-radius: var(--radius-sm);
 			background: var(--accent-subtle);
 			color: var(--accent);
 			font-weight: 700;
