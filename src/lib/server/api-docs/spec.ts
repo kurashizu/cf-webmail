@@ -102,6 +102,24 @@ export const apiSections: readonly ApiSectionSpec[] = [
 		tagline: 'Reading, sending, flagging, moving, and bulk operations.',
 		endpoints: [
 			{
+				id: 'list-inbox',
+				method: 'GET',
+				path: '/api/inbox',
+				summary: 'List inbox messages',
+				description:
+					'Returns one page of the signed-in account\'s inbox. Used by the inbox page\'s polling refresh. Other folders are loaded via the SvelteKit server `load` functions rather than dedicated JSON endpoints, so this URL is fixed to `INBOX`.',
+				auth: 'session',
+				requestFields: [
+					{
+						name: 'page',
+						type: 'integer',
+						description: '1-indexed page number. Defaults to 1. Page size is taken from the `DEFAULT_PAGE_SIZE` binding (10 if unset).'
+					}
+				],
+				responseExample:
+					'{\n  "messages": [\n    {\n      "id": "5b1a…",\n      "fromAddr": "alice@example.com",\n      "fromName": "Alice",\n      "to": ["you@krsz.in"],\n      "subject": "Hello",\n      "preview": "First 240 chars of the body…",\n      "receivedAt": 1730000000000,\n      "flags": ["\\\\Seen"],\n      "hasAttachments": false,\n      "direction": "incoming"\n    }\n  ]\n}'
+			},
+			{
 				id: 'send-message',
 				method: 'POST',
 				path: '/api/messages/send',
