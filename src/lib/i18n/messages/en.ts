@@ -77,6 +77,7 @@ const en = {
 	'landing.heading1Emphasis': 'thoughtful mail.',
 	'landing.lead': 'A simple, private mailbox with your own',
 	'landing.leadSuffix': 'address.',
+	'landing.scrollDown': 'Scroll down',
 	'landing.ctaInvitation': 'I have an invitation',
 	'landing.principlesHeading': 'What {brand} offers',
 	'landing.principle1Title': 'Personal',

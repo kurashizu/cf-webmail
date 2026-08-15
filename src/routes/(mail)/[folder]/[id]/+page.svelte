@@ -35,6 +35,7 @@
 		starred = data.message.flags.includes('\\Flagged');
 	});
 	let frameHeight = $state(420);
+	let readProgress = $state(0);
 
 	const replySubject = $derived(
 		/^re:/i.test(data.message.subject) ? data.message.subject : `${tt('message.subjectPrefix')} ${data.message.subject}`
@@ -209,11 +210,34 @@
 		const response = await fetch(`/api/messages/${data.message.id}/read`, { method: 'POST' });
 		if (response.ok) await invalidateAll();
 	});
+
+	onMount(() => {
+		// Reading progress — track how far through the article the user has scrolled.
+		// Done off the .main element (which is the scroll container in the mail layout)
+		// so the calculation stays accurate on long bodies inside the iframe-less view.
+		const main = document.querySelector<HTMLElement>('.main');
+		if (!main) return;
+		let ticking = false;
+		const update = () => {
+			ticking = false;
+			const max = main.scrollHeight - main.clientHeight;
+			readProgress = max > 0 ? Math.min(1, Math.max(0, main.scrollTop / max)) : 0;
+		};
+		const onScroll = () => {
+			if (ticking) return;
+			ticking = true;
+			requestAnimationFrame(update);
+		};
+		main.addEventListener('scroll', onScroll, { passive: true });
+		update();
+		return () => main.removeEventListener('scroll', onScroll);
+	});
 </script>
 
 <svelte:head><title>{data.message.subject} · KRSZ Mail</title></svelte:head>
 
 <article class="page">
+	<div class="read-progress" aria-hidden="true" style:transform={`scaleX(${readProgress})`}></div>
 	<nav class="toolbar" aria-label="Message actions">
 		<a class="back" href="/{data.folderSlug}">
 			<svg viewBox="0 0 24 24" fill="none"><path d="m15 18-6-6 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -282,7 +306,20 @@
 </article>
 
 <style>
-	.page { width: min(100%, 980px); margin: 0 auto; padding: var(--space-5) var(--space-6) var(--space-10); }
+	.page { position: relative; width: min(100%, 980px); margin: 0 auto; padding: var(--space-5) var(--space-6) var(--space-10); }
+	/* Reading progress — phosphor bar at the top of the article. */
+	.read-progress {
+		position: absolute;
+		left: 0;
+		right: 0;
+		top: 0;
+		height: 2px;
+		background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+		transform-origin: left center;
+		transform: scaleX(0);
+		transition: transform 80ms linear;
+		box-shadow: 0 0 12px var(--accent-glow);
+	}
 	.toolbar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-4); }
 	.back { display: inline-flex; align-items: center; gap: 7px; color: var(--text-secondary); font-size: 12px; }
 	.back svg { width: 18px; }

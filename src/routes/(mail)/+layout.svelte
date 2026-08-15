@@ -76,6 +76,7 @@
 	});
 
 	let searchInputEl: HTMLInputElement | undefined = $state();
+	let scrolled = $state(false);
 
 	// Inbox-level scroll position preservation: stash when leaving a list
 	function preserveScroll() {
@@ -104,6 +105,27 @@
 				setTimeout(restoreScroll, 50);
 			}
 		});
+	});
+
+	onMount(() => {
+		// Toggle the scrolled state on the topbar so it can deepen its shadow
+		// once the user has moved past the first viewport row. Cheap rAF-throttle
+		// keeps it smooth on touchpads without re-querying the DOM each scroll.
+		const main = document.querySelector<HTMLElement>('.main');
+		if (!main) return;
+		let ticking = false;
+		const update = () => {
+			ticking = false;
+			scrolled = main.scrollTop > 6;
+		};
+		const onScroll = () => {
+			if (ticking) return;
+			ticking = true;
+			requestAnimationFrame(update);
+		};
+		main.addEventListener('scroll', onScroll, { passive: true });
+		update();
+		return () => main.removeEventListener('scroll', onScroll);
 	});
 
 	onMount(() => {
@@ -147,7 +169,7 @@
 
 <div class="app" class:transitioning class:menu-open={mobileMenuOpen}>
 	<Toast />
-	<header class="topbar">
+	<header class="topbar" class:scrolled={scrolled}>
 		<a href="/inbox" class="brand" aria-label={tt('landing.signInAria', { brand: tt('common.brandName') })}>
 			<img class="logo-mark" src="/brand-mark.svg" alt="" width="32" height="32" />
 			<span class="brand-name font-serif">{tt('common.brandName')}</span>
@@ -319,6 +341,10 @@
 		justify-content: space-between;
 		padding: 0 var(--space-6);
 		height: var(--header-height);
+		transition: box-shadow var(--transition-base), background var(--transition-base);
+	}
+	.topbar.scrolled {
+		box-shadow: 0 8px 24px -10px rgba(0, 0, 0, 0.55), 0 1px 0 var(--border);
 	}
 
 	.brand {
@@ -492,6 +518,7 @@
 	}
 
 	.folder {
+		position: relative;
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
@@ -502,15 +529,32 @@
 		transition: all var(--transition-fast);
 	}
 
+	/* Folder "cursor" — terminal-style left bar that appears on hover and
+	 * locks in for the active route. Pure CSS, no JS, no extra DOM. */
+	.folder::before {
+		content: '';
+		position: absolute;
+		left: 0;
+		top: 6px;
+		bottom: 6px;
+		width: 2px;
+		background: var(--accent);
+		transform: scaleY(0);
+		transform-origin: center;
+		transition: transform var(--transition-base) var(--ease-snap);
+	}
+	.folder:hover::before { transform: scaleY(0.6); }
 	.folder:hover {
 		background: var(--accent-subtle);
 		color: var(--text-primary);
+		transform: translateX(2px);
 	}
-
 	.folder.active {
 		background: var(--accent-subtle);
 		color: var(--accent);
 	}
+	.folder.active::before { transform: scaleY(1); }
+	.folder.active:hover { transform: none; }
 
 	.badge {
 		background: var(--accent);

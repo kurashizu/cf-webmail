@@ -76,6 +76,7 @@ const ko: Dict = {
 	'landing.heading1Emphasis': '차분한 메일 공간.',
 	'landing.lead': '단순하고 사적인, 당신만의',
 	'landing.leadSuffix': '주소.',
+	'landing.scrollDown': '아래로 스크롤',
 	'landing.ctaInvitation': '초대 코드가 있습니다',
 	'landing.principlesHeading': '{brand} 가 드리는 것',
 	'landing.principle1Title': '개인화',

@@ -469,6 +469,7 @@
 		<ul class="list" aria-label={tt('inbox.title')}>
 			{#each messages as message (message.id)}
 				<li class="msg" class:unread={isUnread(message)} class:selected={selected.has(message.id)}>
+					<span class="unread-dot" aria-hidden="true"></span>
 					<label class="row-select" aria-label={`Select ${message.subject}`}>
 						<input
 							type="checkbox"
@@ -566,7 +567,45 @@
 	.empty p { margin: 0; font-size: 13px; }
 	.empty code { padding: 2px 6px; border-radius: var(--radius-sm); background: var(--bg-elevated); font-size: 12px; }
 	.list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; background: var(--bg-secondary); }
-	.msg { position: relative; display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; border-bottom: 1px solid var(--border); transition: background var(--transition-fast); }
+	.msg {
+		position: relative;
+		display: grid;
+		grid-template-columns: 8px 32px minmax(0, 1fr) auto;
+		border-bottom: 1px solid var(--border);
+		transition: background var(--transition-fast);
+	}
+	/* Left accent stripe — slides in on hover, locks in on selection. */
+	.msg::before {
+		content: '';
+		position: absolute;
+		left: 0;
+		top: 0;
+		bottom: 0;
+		width: 2px;
+		background: var(--accent);
+		transform: scaleY(0);
+		transform-origin: center;
+		transition: transform var(--transition-base) var(--ease-snap);
+	}
+	.msg:hover::before { transform: scaleY(0.6); }
+	.msg.selected::before { transform: scaleY(1); }
+	/* Unread dot — small phosphor marker in the gutter. */
+	.unread-dot {
+		display: block;
+		align-self: center;
+		justify-self: center;
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		background: transparent;
+		transform: scale(0.5);
+		transition: background var(--transition-base), transform var(--transition-base), box-shadow var(--transition-base);
+	}
+	.msg.unread .unread-dot {
+		background: var(--accent);
+		box-shadow: 0 0 8px var(--accent-glow);
+		transform: scale(1);
+	}
 	.msg.selected { background: var(--accent-subtle); }
 	.row-select { display: grid; place-items: center; padding-left: 8px; cursor: pointer; }
 	.row-select input, .select-all input {

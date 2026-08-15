@@ -245,10 +245,11 @@
 		.metric-head strong { font-size: 14px; font-weight: 600; letter-spacing: -.01em; }
 		.metric-head .of { color: var(--text-muted); font-weight: 400; }
 		.metric-head .pct { font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
-		.bar { height: 8px; border-radius: 999px; background: var(--bg-elevated); overflow: hidden; border: 1px solid var(--border); }
-		.bar-fill { height: 100%; background: var(--accent); transition: width .25s ease; }
+		.bar { height: 8px; border-radius: 999px; background: var(--bg-elevated); overflow: hidden; border: 1px solid var(--border); position: relative; }
+		.bar-fill { height: 100%; background: var(--accent); transition: width .35s var(--ease-snap), background-color var(--transition-base); position: relative; }
 		.bar[data-level='warn'] .bar-fill { background: var(--color-warning-fg); }
-					.bar[data-level='high'] .bar-fill { background: var(--color-danger); }
+					.bar[data-level='high'] .bar-fill { background: var(--color-danger); box-shadow: 0 0 12px var(--color-danger-border); }
+					.bar[data-level='high'] .bar-fill::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,.25), transparent); background-size: 200% 100%; animation: shimmer 1.6s ease infinite; }
 		.metric-sub { display: flex; flex-wrap: wrap; gap: 6px; color: var(--text-muted); font-size: 11px; }
 		.metric-sub .dot { opacity: .6; }
 		.notice.warn { border-color: var(--color-warning-border); background: var(--color-warning-bg); color: var(--color-warning); }

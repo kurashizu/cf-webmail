@@ -40,9 +40,12 @@
 		<div class="actions">
 			<a href="/register" class="primary-action">{tt('landing.ctaInvitation')}</a>
 		</div>
+		<a class="scroll-indicator" href="#principles" aria-label={tt('landing.scrollDown')}>
+			<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+		</a>
 	</section>
 
-	<section class="principles" aria-label={tt('landing.principlesHeading', { brand: tt('common.brandName') })}>
+	<section id="principles" class="principles" aria-label={tt('landing.principlesHeading', { brand: tt('common.brandName') })}>
 		<div>
 			<span class="principle-number">01</span>
 			<h2>{tt('landing.principle1Title')}</h2>
@@ -87,7 +90,34 @@
 	.address { color: var(--text-primary); font-weight: 550; }
 	.actions { margin-top: 37px; display: flex; align-items: center; justify-content: center; gap: 12px; }
 	.primary-action { min-height: 46px; padding: 0 20px; border-radius: var(--radius-sm); display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+	.scroll-indicator {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 44px;
+		height: 44px;
+		margin-top: 38px;
+		border: 1px solid var(--border);
+		border-radius: 999px;
+		color: var(--text-muted);
+		transition: border-color var(--transition-base), color var(--transition-base), transform var(--transition-base);
+	}
+	.scroll-indicator svg {
+		width: 18px;
+		height: 18px;
+		animation: soft-pulse 1.8s var(--ease-in-out) infinite;
+	}
+	.scroll-indicator:hover {
+		border-color: var(--accent);
+		color: var(--accent);
+		transform: translateY(2px);
+	}
 	.principles { width: min(960px, calc(100% - 48px)); margin: 0 auto; padding: 43px 0 50px; border-top: 1px solid var(--border); display: grid; grid-template-columns: repeat(3, 1fr); gap: 56px; }
+	.principles > div {
+		padding: 4px 0;
+		transition: transform var(--transition-base);
+	}
+	.principles > div:hover { transform: translateY(-2px); }
 	.principle-number { color: var(--accent); font-family: var(--font-mono); font-size: 10px; }
 	.principles h2 { margin: 12px 0 7px; font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
 	.principles p { margin: 0; color: var(--text-muted); font-size: 13px; line-height: 1.6; }

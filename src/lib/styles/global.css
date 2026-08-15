@@ -48,6 +48,15 @@ button {
 	cursor: pointer;
 }
 
+/* Keyboard focus ring — only shows for keyboard nav, not mouse clicks. */
+:where(button, a, input, textarea, select, [tabindex]):focus-visible {
+	outline: none;
+	box-shadow:
+		0 0 0 2px var(--bg-primary),
+		0 0 0 4px var(--accent);
+	border-radius: var(--radius-sm);
+}
+
 input:not([type='checkbox']):not([type='radio']),
 textarea,
 select {
@@ -161,4 +170,61 @@ select:focus {
 	50% {
 		background-position: 100% 50%;
 	}
+}
+
+/* Reusable micro-interaction atoms — defined once so component styles can
+ * reference them by class without redeclaring the keyframes. */
+@keyframes soft-pulse {
+	50% {
+		opacity: 0.55;
+		transform: scale(0.92);
+	}
+}
+.pulse {
+	animation: soft-pulse 1.4s var(--ease-in-out) infinite;
+}
+
+@keyframes star-pop {
+	0% { transform: scale(1); }
+	45% { transform: scale(1.35) rotate(-7deg); }
+	70% { transform: scale(0.92) rotate(3deg); }
+	100% { transform: scale(1) rotate(0); }
+}
+.star-pop {
+	animation: star-pop 320ms var(--ease-spring);
+}
+
+@keyframes slide-down-fade {
+	from { opacity: 0; transform: translateY(-8px); }
+	to { opacity: 1; transform: translateY(0); }
+}
+.slide-down {
+	animation: slide-down-fade 220ms var(--ease-out);
+}
+
+@keyframes slide-up-fade {
+	from { opacity: 0; transform: translateY(6px); }
+	to { opacity: 1; transform: translateY(0); }
+}
+.slide-up {
+	animation: slide-up-fade 220ms var(--ease-out);
+}
+
+@keyframes glow-pulse {
+	0%, 100% { box-shadow: 0 0 0 0 var(--accent-glow); }
+	50% { box-shadow: 0 0 0 8px transparent; }
+}
+.glow-pulse {
+	animation: glow-pulse 1.6s var(--ease-in-out) infinite;
+}
+
+/* Loading shimmer used by message bodies and attachment counts. */
+@keyframes shimmer {
+	to { background-position: -200% 0; }
+}
+.skeleton-shimmer {
+	background: linear-gradient(90deg, var(--bg-card), var(--bg-elevated), var(--bg-card));
+	background-size: 200% 100%;
+	animation: shimmer 1.4s ease infinite;
+	border-radius: var(--radius-full);
 }

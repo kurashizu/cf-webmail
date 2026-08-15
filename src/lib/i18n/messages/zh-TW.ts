@@ -74,6 +74,7 @@ const zhTW: Dict = {
 	'landing.heading1Emphasis': '從容通信空間。',
 	'landing.lead': '簡潔、私密的電子郵件，配一個真正屬於你的',
 	'landing.leadSuffix': '地址。',
+	'landing.scrollDown': '向下捲動',
 	'landing.ctaInvitation': '我有邀請碼',
 	'landing.principlesHeading': '{brand} 能帶給你什麼',
 	'landing.principle1Title': '個人化',
