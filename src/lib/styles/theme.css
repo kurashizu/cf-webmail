@@ -96,6 +96,11 @@
 	--ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 	--ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 	--ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+	--ease-snap: cubic-bezier(0.4, 0, 0.2, 1);   /* Material-style snap */
+
+	/* Scroll-driven */
+	--topbar-shadow: linear-gradient(180deg, rgba(0, 0, 0, 0.5), transparent);
+	--topbar-shadow-light: linear-gradient(180deg, rgba(23, 34, 44, 0.12), transparent);
 }
 
 /* Light theme — a hardened terminal-on-paper: same bones, inverted ink. */
@@ -159,4 +164,18 @@ html[data-theme='light'] .bottom-nav { background: var(--glass-bottom); }
 
 :root {
 	color-scheme: dark;
+}
+
+/* Respect users who request reduced motion: kill animations and snap
+ * transitions to instant. Component styles still apply the final visual
+ * state — they just don't tween in. */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.001ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.001ms !important;
+		scroll-behavior: auto !important;
+	}
 }

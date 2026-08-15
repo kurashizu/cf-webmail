@@ -74,6 +74,7 @@ const zhCN: Dict = {
 	'landing.heading1Emphasis': '从容通信空间。',
 	'landing.lead': '简洁、私密的邮箱，配一个真正属于你的',
 	'landing.leadSuffix': '地址。',
+	'landing.scrollDown': '向下滚动',
 	'landing.ctaInvitation': '我有邀请码',
 	'landing.principlesHeading': '{brand} 能给你什么',
 	'landing.principle1Title': '个人化',

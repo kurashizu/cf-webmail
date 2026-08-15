@@ -75,6 +75,7 @@ const ja: Dict = {
 	'landing.heading1Emphasis': '落ち着いたメール空間。',
 	'landing.lead': 'シンプルでプライベートな、あなた自身の',
 	'landing.leadSuffix': 'アドレス。',
+	'landing.scrollDown': '下にスクロール',
 	'landing.ctaInvitation': '招待コードをお持ちの方',
 	'landing.principlesHeading': '{brand} でできること',
 	'landing.principle1Title': 'パーソナル',
