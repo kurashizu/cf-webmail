@@ -6,6 +6,20 @@
 	let { data }: { data: PageData } = $props();
 	const tt = (key: string, params?: Record<string, string | number>) =>
 		t(data.locale, key, params);
+
+	/** Brand slogan — kept in English in every locale because the four letters
+	 * K / R / S / Z are the brand mnemonic (matches `KRSZ Mail`). Each letter is
+	 * rendered with .accent-letter so the brand colour repeats throughout. */
+	const slogan = [
+		{ letter: 'K', accent: true },
+		{ text: 'eep ' },
+		{ letter: 'R', accent: true },
+		{ text: 'eachable, ' },
+		{ letter: 'S', accent: true },
+		{ text: 'tay ' },
+		{ letter: 'Z', accent: true },
+		{ text: 'ealous.' }
+	];
 </script>
 
 <svelte:head>
@@ -31,21 +45,20 @@
 
 	<section class="hero">
 		<div class="eyebrow">{tt('landing.eyebrow')}</div>
-		<h1>{tt('landing.heading1')}<br /><em>{tt('landing.heading1Emphasis')}</em></h1>
+		<h1 class="slogan" aria-label="Keep Reachable, Stay Zealous">
+			{#each slogan as token}
+				{#if token.accent}<span class="accent-letter">{token.letter}</span>{:else}{token.text}{/if}
+			{/each}
+		</h1>
 		<p class="lead">
-			{tt('landing.lead')}
-			<span class="address">@{data.domain}</span>
-			{tt('landing.leadSuffix')}
+			{tt('landing.lead')}<span class="address">@{data.domain}</span>{tt('landing.leadSuffix')}
 		</p>
 		<div class="actions">
 			<a href="/register" class="primary-action">{tt('landing.ctaInvitation')}</a>
 		</div>
-		<a class="scroll-indicator" href="#principles" aria-label={tt('landing.scrollDown')}>
-			<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-		</a>
 	</section>
 
-	<section id="principles" class="principles" aria-label={tt('landing.principlesHeading', { brand: tt('common.brandName') })}>
+	<section class="principles" aria-label={tt('landing.principlesHeading', { brand: tt('common.brandName') })}>
 		<div>
 			<span class="principle-number">01</span>
 			<h2>{tt('landing.principle1Title')}</h2>
@@ -82,36 +95,26 @@
 	.nav-actions { display: flex; align-items: center; gap: var(--space-3); }
 	.sign-in { padding: 9px 15px; border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-secondary); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 	.sign-in:hover { border-color: var(--accent); background: var(--accent-subtle); color: var(--accent); }
-	.hero { width: min(760px, calc(100% - 48px)); margin: auto; padding: 96px 0 112px; text-align: center; }
+	.hero { width: min(820px, calc(100% - 48px)); margin: auto; padding: 96px 0 112px; text-align: center; }
 	.eyebrow { margin-bottom: 25px; color: var(--accent); font-family: var(--font-mono); font-size: 11px; font-weight: 650; letter-spacing: .16em; text-transform: uppercase; }
-	h1 { margin: 0; font-size: clamp(52px, 8vw, 88px); line-height: .98; letter-spacing: -.055em; font-weight: 650; }
-	h1 em { font-family: var(--font-mono); font-weight: 700; font-style: normal; color: var(--accent); }
-	.lead { max-width: 520px; margin: 30px auto 0; color: var(--text-secondary); font-size: 17px; line-height: 1.65; }
+	.slogan {
+		margin: 0;
+		font-size: clamp(48px, 7.4vw, 84px);
+		line-height: 1.02;
+		letter-spacing: -.045em;
+		font-weight: 650;
+	}
+	.accent-letter {
+		color: var(--accent);
+		font-family: var(--font-mono);
+		font-weight: 700;
+		letter-spacing: -.02em;
+	}
+	.lead { max-width: 560px; margin: 30px auto 0; color: var(--text-secondary); font-size: 17px; line-height: 1.65; }
 	.address { color: var(--text-primary); font-weight: 550; }
 	.actions { margin-top: 37px; display: flex; align-items: center; justify-content: center; gap: 12px; }
 	.primary-action { min-height: 46px; padding: 0 20px; border-radius: var(--radius-sm); display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-	.scroll-indicator {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 44px;
-		height: 44px;
-		margin-top: 38px;
-		border: 1px solid var(--border);
-		border-radius: 999px;
-		color: var(--text-muted);
-		transition: border-color var(--transition-base), color var(--transition-base), transform var(--transition-base);
-	}
-	.scroll-indicator svg {
-		width: 18px;
-		height: 18px;
-		animation: soft-pulse 1.8s var(--ease-in-out) infinite;
-	}
-	.scroll-indicator:hover {
-		border-color: var(--accent);
-		color: var(--accent);
-		transform: translateY(2px);
-	}
+	
 	.principles { width: min(960px, calc(100% - 48px)); margin: 0 auto; padding: 43px 0 50px; border-top: 1px solid var(--border); display: grid; grid-template-columns: repeat(3, 1fr); gap: 56px; }
 	.principles > div {
 		padding: 4px 0;
@@ -125,7 +128,7 @@
 	@media (max-width: 680px) {
 		nav { height: 72px; }
 		.hero { width: min(100% - 32px, 560px); padding: 78px 0 90px; }
-		h1 { font-size: clamp(46px, 15vw, 64px); }
+		.slogan { font-size: clamp(42px, 13vw, 60px); }
 		.lead { font-size: 15px; }
 		.actions { flex-direction: column; }
 		.primary-action { width: min(100%, 300px); }
