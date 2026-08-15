@@ -37,8 +37,8 @@ so SSR and client rendering always agree.
 ```ts
 import { t, type Locale } from '$lib/i18n';
 
-t('zh-CN' as Locale, 'landing.heading1');
-// → "为你而生的"
+t('zh-CN' as Locale, 'landing.principle1Title');
+// → "始终在线"
 
 t('en' as Locale, 'inbox.unreadCount', { count: 5 });
 // → "5 messages"
