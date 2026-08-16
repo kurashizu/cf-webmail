@@ -137,10 +137,16 @@ select:focus {
 	background: var(--bg-card);
 	border: 1px solid var(--border);
 	border-radius: var(--radius-md);
-	transition: border-color var(--transition-base);
+	box-shadow: var(--shadow-card);
+	transition:
+		border-color var(--transition-base),
+		box-shadow var(--transition-base),
+		transform var(--transition-base);
 }
 .card:hover {
 	border-color: var(--border-hover);
+	box-shadow: var(--shadow-card-hover);
+	transform: translateY(-1px);
 }
 
 .text-muted {

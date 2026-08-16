@@ -560,7 +560,7 @@
 	.new-mail span { margin-left: auto; color: var(--text-muted); font-size: 10px; text-transform: uppercase; }
 	@keyframes pulse { 50% { opacity: .35; transform: scale(.8); } }
 	.count { color: var(--text-muted); font-size: 12px; padding-bottom: 5px; }
-	.action-error { margin-bottom: var(--space-4); padding: 10px 12px; border: 1px solid rgba(255,80,80,.3); border-radius: var(--radius-md); color: #ff9b9b; background: rgba(255,80,80,.08); font-size: 13px; }
+	.action-error { margin-bottom: var(--space-4); padding: 10px 12px; border: 1px solid var(--color-danger-border); border-radius: var(--radius-md); color: var(--color-danger-bright); background: var(--color-danger-bg); font-size: 13px; }
 	.empty { min-height: 380px; display: grid; place-content: center; justify-items: center; text-align: center; border: 1px dashed var(--border); border-radius: var(--radius-lg); padding: var(--space-8); color: var(--text-secondary); }
 	.empty-icon { display: grid; place-items: center; width: 48px; height: 48px; margin-bottom: var(--space-4); border-radius: 50%; background: var(--accent-subtle); color: var(--accent); font-size: 20px; }
 	.empty h2 { margin: 0 0 var(--space-2); color: var(--text-primary); font-size: 18px; font-weight: 600; }
