@@ -5,20 +5,22 @@
 //     copy when offline so the UI still loads when the network drops.
 //   - Pass API requests straight through to the network — mail data has to
 //     be live.
-//   - Pre-cache the manifest and icon assets on install so the PWA install
-//     flow works offline too.
+//   - Pre-cache the manifest, brand-mark, and icon assets on install so the
+//     PWA install flow works offline too.
 
-const VERSION = 'v1';
+const VERSION = 'v2';
 const STATIC_CACHE = `krsz-static-${VERSION}`;
 const SHELL_CACHE = `krsz-shell-${VERSION}`;
 
 const PRECACHE_URLS = [
 	'/manifest.webmanifest',
 	'/favicon.ico',
+	'/favicon.svg',
 	'/icon.png',
 	'/icon-192.png',
 	'/icon-512.png',
-	'/apple-touch-icon.png'
+	'/apple-touch-icon.png',
+	'/brand-mark.svg'
 ];
 
 const OFFLINE_HTML = `<!doctype html>
@@ -27,27 +29,51 @@ const OFFLINE_HTML = `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>KRSZ Mail · Offline</title>
-<link rel="icon" href="/favicon.ico" type="image/x-icon">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#0d1116" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#e6e9ed" media="(prefers-color-scheme: light)">
 <style>
-	body { margin: 0; min-height: 100vh; background: #0a0a0f; color: #e8e8ed;
-		font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+	:root { color-scheme: dark; }
+	body { margin: 0; min-height: 100vh; background: #0d1116; color: #c5cdd8;
+		font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
 		display: grid; place-items: center; padding: 24px; }
 	.card { max-width: 420px; text-align: center; padding: 32px 28px;
-		background: #1a1a24; border: 1px solid #2a2a3a; border-radius: 16px; }
-	.dot { width: 48px; height: 48px; margin: 0 auto 18px; border-radius: 50%;
-		background: rgba(255, 107, 53, 0.12); color: #ff6b35;
-		display: grid; place-items: center; font-size: 22px; }
-	h1 { margin: 0 0 10px; font-size: 19px; font-weight: 600; }
-	p { margin: 0 0 18px; color: #9090a0; font-size: 13px; line-height: 1.55; }
-	button { display: inline-flex; align-items: center; gap: 7px; padding: 9px 16px;
-		border: 0; border-radius: 999px; background: #ff6b35; color: white;
-		font: inherit; font-weight: 500; cursor: pointer; }
-	button:hover { background: #ff8555; }
+		background: #161b23; border: 1px solid #262d37;
+		box-shadow: 0 1px 2px rgba(0,0,0,0.35), 0 6px 18px rgba(0,0,0,0.28);
+		border-radius: 0; }
+	.brand { display: inline-flex; align-items: center; gap: 10px;
+		margin-bottom: 18px; color: #c5cdd8; font-weight: 700; letter-spacing: -0.5px; }
+	.brand img { width: 28px; height: 28px; }
+	.dot { width: 40px; height: 40px; margin: 0 auto 14px;
+		background: rgba(126, 179, 160, 0.12); color: #7eb3a0;
+		display: grid; place-items: center; font-size: 18px;
+		border: 1px solid rgba(126, 179, 160, 0.28); }
+	h1 { margin: 0 0 10px; font-size: 16px; font-weight: 600;
+		letter-spacing: 0.5px; text-transform: uppercase; }
+	p { margin: 0 0 18px; color: #8995a2; font-size: 12px; line-height: 1.55; }
+	button { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px;
+		border: 1px solid #7eb3a0; border-radius: 0; background: transparent;
+		color: #7eb3a0; font: inherit; font-weight: 500; cursor: pointer;
+		text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; }
+	button:hover { background: rgba(126, 179, 160, 0.12); border-color: #92c5b3; color: #92c5b3; }
+	@media (prefers-color-scheme: light) {
+		:root { color-scheme: light; }
+		body { background: #e6e9ed; color: #1c242d; }
+		.card { background: #fafbfc; border-color: #c1c9d2;
+			box-shadow: 0 1px 2px rgba(28,36,45,0.06), 0 6px 18px rgba(28,36,45,0.12); }
+		.brand { color: #1c242d; }
+		.dot { background: rgba(74, 130, 117, 0.12); color: #4a8275;
+			border-color: rgba(74, 130, 117, 0.28); }
+		p { color: #4a5764; }
+		button { border-color: #4a8275; color: #4a8275; }
+		button:hover { background: rgba(74, 130, 117, 0.12); border-color: #5d9689; color: #5d9689; }
+	}
 </style>
 </head>
 <body>
 <div class="card">
-	<div class="dot">⚡</div>
+	<div class="brand"><img src="/brand-mark.svg" alt="" width="28" height="28">KRSZ Mail</div>
+	<div class="dot">⌁</div>
 	<h1>You&rsquo;re offline</h1>
 	<p>KRSZ Mail needs a connection to load your mailbox. We&rsquo;ll retry as soon as you&rsquo;re back online.</p>
 	<button onclick="location.reload()">Try again</button>
@@ -90,10 +116,12 @@ function isAssetRequest(url) {
 		url.pathname.startsWith('/_app/') ||
 		url.pathname.startsWith('/icons/') ||
 		url.pathname === '/favicon.ico' ||
+		url.pathname === '/favicon.svg' ||
 		url.pathname === '/icon.png' ||
 		url.pathname === '/icon-192.png' ||
 		url.pathname === '/icon-512.png' ||
 		url.pathname === '/apple-touch-icon.png' ||
+		url.pathname === '/brand-mark.svg' ||
 		url.pathname === '/manifest.webmanifest'
 	);
 }
@@ -121,7 +149,7 @@ self.addEventListener('fetch', (event) => {
 						}
 						return response;
 					})
-					.catch(() => caches.match('/icon-192.png'));
+					.catch(() => caches.match('/brand-mark.svg'));
 			})
 		);
 		return;

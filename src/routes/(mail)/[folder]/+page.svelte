@@ -334,7 +334,7 @@
 	.head-actions { display: flex; align-items: center; gap: var(--space-3); }
 	.empty-trash { border-color: var(--color-danger-border); color: var(--color-danger); background: var(--color-danger-bg); }
 	.count { color: var(--text-muted); font-size: 12px; padding-bottom: 5px; }
-	.action-error { margin-bottom: var(--space-4); padding: 10px 12px; border: 1px solid rgba(255,80,80,.3); border-radius: var(--radius-md); color: #ff9b9b; background: rgba(255,80,80,.08); font-size: 13px; }
+	.action-error { margin-bottom: var(--space-4); padding: 10px 12px; border: 1px solid var(--color-danger-border); border-radius: var(--radius-md); color: var(--color-danger-bright); background: var(--color-danger-bg); font-size: 13px; }
 	.storage-banner { display: flex; align-items: center; gap: 12px; margin-bottom: var(--space-4); padding: 11px 14px; border: 1px solid; border-radius: var(--radius-md); font-size: 12px; }
 	.storage-banner[data-level='high'] { border-color: var(--color-warning-border); background: var(--color-warning-bg); color: var(--color-warning); }
 	.storage-banner[data-level='critical'] { border-color: var(--color-danger-border); background: var(--color-danger-bg); color: var(--color-danger); }

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { themeStore, applyTheme, type Theme } from '$lib/stores/theme';
 
-	const metaColor: Record<Theme, string> = { dark: '#090b10', light: '#edf1f5' };
+	const metaColor: Record<Theme, string> = { dark: '#0d1116', light: '#e6e9ed' };
 
 	let theme = $state<Theme>('dark');
 

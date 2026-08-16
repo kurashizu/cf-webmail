@@ -61,8 +61,8 @@
 	 * the user flips the theme toggle. Emails that declare their own colours
 	 * keep them; anything without explicit styling falls onto the theme canvas. */
 	function injectBaseStyles(html: string, theme: 'dark' | 'light'): string {
-		const canvas = theme === 'light' ? '#ffffff' : '#121722';
-		const link = theme === 'light' ? '#0f8f6f' : '#4fd3b2';
+		const canvas = theme === 'light' ? '#fafbfc' : '#161b23';
+		const link = theme === 'light' ? '#4a8275' : '#7eb3a0';
 		return `<style>:root{color-scheme:${theme}}html{background:${canvas}!important;color-scheme:${theme}}body{background-color:transparent!important}a{color:${link}}</style>${html}`;
 	}
 
