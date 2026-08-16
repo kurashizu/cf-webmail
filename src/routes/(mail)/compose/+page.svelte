@@ -299,7 +299,7 @@ function formatMB(bytes: number) {
 	.file-info { color: var(--text-muted); font-size: 10px; }
 	.footer-actions { display: flex; align-items: center; gap: var(--space-2); }
 	.save-draft { display: inline-flex; align-items: center; gap: 7px; padding: 10px 14px; color: var(--text-secondary); border-color: var(--border-hover); transition: background var(--transition-base), color var(--transition-base), border-color var(--transition-base); }
-	.save-draft:hover { background: var(--accent-subtle); border-color: var(--border-hover); color: var(--text); }
+	.save-draft:hover { background: var(--accent-subtle); border-color: var(--border-hover); color: var(--text-primary); }
 	.save-draft svg { width: 15px; height: 15px; transition: transform var(--transition-base); }
 	.save-draft:hover:not(:disabled) svg { transform: translateY(-1px); }
 	.save-draft:disabled { opacity: .5; cursor: not-allowed; }

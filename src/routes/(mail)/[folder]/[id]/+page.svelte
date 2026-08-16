@@ -391,7 +391,6 @@
 	.skeleton { display: grid; gap: 12px; padding-top: 5px; }
 	.skeleton span { height: 11px; border-radius: var(--radius-full); background: linear-gradient(90deg, var(--bg-card), var(--bg-elevated), var(--bg-card)); background-size: 200% 100%; animation: shimmer 1.4s infinite; }
 	.skeleton span:nth-child(1) { width: 85%; }.skeleton span:nth-child(2) { width: 72%; }.skeleton span:nth-child(3) { width: 92%; }.skeleton span:nth-child(4) { width: 54%; }
-	@keyframes shimmer { to { background-position: -200% 0; } }
 	@media (max-width: 760px) {
 		.page { padding: 10px 10px calc(72px + var(--space-8) + env(safe-area-inset-bottom, 0px)); }
 		.toolbar { gap: 6px; flex-wrap: nowrap; align-items: center; }

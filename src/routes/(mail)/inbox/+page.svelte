@@ -530,133 +530,129 @@
 </section>
 
 <style>
-	.page { width: min(100%, 1040px); margin: 0 auto; padding: var(--space-6); }
-	.page-head { display: flex; justify-content: space-between; align-items: end; margin-bottom: var(--space-5); }
-	.eyebrow { margin: 0 0 4px; color: var(--accent); font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
-	.page-head h1 { margin: 0; font-size: clamp(25px, 3vw, 34px); font-weight: 600; letter-spacing: -.025em; }
-	.head-actions { display: flex; align-items: center; gap: 8px; }
-	.sync-status { display: inline-flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
-	.sync-status > span { width: 6px; height: 6px; border-radius: 50%; background: var(--color-online); box-shadow: 0 0 0 3px var(--color-success-bg); }
-	.sync-status > span.syncing { background: var(--accent); animation: pulse 1s ease infinite; }
-	.refresh { width: 32px; height: 32px; display: grid; place-items: center; border-radius: var(--radius-md); color: var(--text-muted); }
-	.refresh:hover:not(:disabled) { background: var(--accent-subtle); color: var(--accent); }
-		.storage-banner { display: flex; align-items: center; gap: 12px; margin-bottom: var(--space-4); padding: 11px 14px; border: 1px solid; border-radius: var(--radius-md); font-size: 12px; }
-		.storage-banner[data-level='high'] { border-color: var(--color-warning-border); background: var(--color-warning-bg); color: var(--color-warning); }
-		.storage-banner[data-level='critical'] { border-color: var(--color-danger-border); background: var(--color-danger-bg); color: var(--color-danger); }
-		.storage-banner svg { width: 18px; height: 18px; flex: none; }
-		.storage-banner strong { display: block; font-size: 12px; font-weight: 600; }
-		.storage-banner span { display: block; margin-top: 2px; font-size: 11px; opacity: .9; }
-		.storage-banner .btn { margin-left: auto; padding: 6px 12px; font-size: 11px; }
-		.storage-banner > button { width: 28px; height: 28px; border: 0; border-radius: 50%; background: transparent; color: inherit; font-size: 18px; opacity: .65; }
-		.storage-banner > button:hover { background: color-mix(in srgb, var(--text-primary) 8%, transparent); opacity: 1; }
-	.mark-all-read { width: 32px; height: 32px; display: grid; place-items: center; border-radius: var(--radius-md); color: var(--text-muted); }
-		.mark-all-read:hover:not(:disabled) { background: var(--accent-subtle); color: var(--accent); }
-		.mark-all-read:disabled { cursor: wait; opacity: .55; }
-		.mark-all-read svg { width: 17px; height: 17px; }
-		.refresh:disabled { cursor: wait; opacity: .55; }
-	.refresh svg { width: 17px; height: 17px; }
-	.new-mail { width: 100%; display: flex; align-items: center; gap: 9px; margin-bottom: var(--space-4); padding: 10px 13px; border: 1px solid var(--accent-soft); border-radius: var(--radius-md); background: var(--accent-subtle); color: var(--accent); font-size: 12px; text-align: left; }
-	.new-mail svg { width: 17px; height: 17px; }
-	.new-mail span { margin-left: auto; color: var(--text-muted); font-size: 10px; text-transform: uppercase; }
-	@keyframes pulse { 50% { opacity: .35; transform: scale(.8); } }
-	.count { color: var(--text-muted); font-size: 12px; padding-bottom: 5px; }
-	.action-error { margin-bottom: var(--space-4); padding: 10px 12px; border: 1px solid var(--color-danger-border); border-radius: var(--radius-md); color: var(--color-danger-bright); background: var(--color-danger-bg); font-size: 13px; }
-	.empty { min-height: 380px; display: grid; place-content: center; justify-items: center; text-align: center; border: 1px dashed var(--border); border-radius: var(--radius-lg); padding: var(--space-8); color: var(--text-secondary); }
-	.empty-icon { display: grid; place-items: center; width: 48px; height: 48px; margin-bottom: var(--space-4); border-radius: 50%; background: var(--accent-subtle); color: var(--accent); font-size: 20px; }
-	.empty h2 { margin: 0 0 var(--space-2); color: var(--text-primary); font-size: 18px; font-weight: 600; }
-	.empty p { margin: 0; font-size: 13px; }
-	.empty code { padding: 2px 6px; border-radius: var(--radius-sm); background: var(--bg-elevated); font-size: 12px; }
-	.list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; background: var(--bg-secondary); }
-	.msg {
-		position: relative;
-		display: grid;
-		grid-template-columns: 8px 32px minmax(0, 1fr) auto;
-		border-bottom: 1px solid var(--border);
-		transition: background var(--transition-fast);
+	/* Inbox-specific: refresh + mark-all-read, sync indicator, per-row actions. */
+	.sync-status {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		color: var(--text-muted);
+		font-size: 10px;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
 	}
-	/* Left accent stripe — slides in on hover, locks in on selection. */
-	.msg::before {
-		content: '';
-		position: absolute;
-		left: 0;
-		top: 0;
-		bottom: 0;
-		width: 2px;
-		background: var(--accent);
-		transform: scaleY(0);
-		transform-origin: center;
-		transition: transform var(--transition-base) var(--ease-snap);
-	}
-	.msg:hover::before { transform: scaleY(0.6); }
-	.msg.selected::before { transform: scaleY(1); }
-	/* Unread dot — small phosphor marker in the gutter. */
-	.unread-dot {
-		display: block;
-		align-self: center;
-		justify-self: center;
+	.sync-status > span {
 		width: 6px;
 		height: 6px;
 		border-radius: 50%;
-		background: transparent;
-		transform: scale(0.5);
-		transition: background var(--transition-base), transform var(--transition-base), box-shadow var(--transition-base);
+		background: var(--color-online);
+		box-shadow: 0 0 0 3px var(--color-success-bg);
 	}
-	.msg.unread .unread-dot {
+	.sync-status > span.syncing {
 		background: var(--accent);
-		box-shadow: 0 0 8px var(--accent-glow);
-		transform: scale(1);
+		animation: inbox-pulse 1s ease infinite;
 	}
-	.msg.selected { background: var(--accent-subtle); }
-	.row-select { display: grid; place-items: center; padding-left: 8px; cursor: pointer; }
-	.row-select input, .select-all input {
-		width: 16px;
-		min-width: 16px;
-		max-width: 16px;
-		height: 16px;
-		min-height: 16px;
-		max-height: 16px;
-		aspect-ratio: 1 / 1;
-		flex: 0 0 16px;
-		padding: 0;
-		margin: 0;
-		appearance: none;
-		-webkit-appearance: none;
-		border: 1px solid var(--border-hover);
-		border-radius: 4px;
-		background: color-mix(in srgb, var(--bg-elevated) 78%, transparent);
+	.refresh,
+	.mark-all-read {
+		width: 32px;
+		height: 32px;
+		display: grid;
+		place-items: center;
+		border-radius: var(--radius-md);
+		color: var(--text-muted);
+		transition: background var(--transition-fast), color var(--transition-fast);
+	}
+	.refresh:hover:not(:disabled),
+	.mark-all-read:hover:not(:disabled) {
+		background: var(--accent-subtle);
+		color: var(--accent);
+	}
+	.refresh:disabled,
+	.mark-all-read:disabled {
+		cursor: wait;
+		opacity: 0.55;
+	}
+	.refresh svg,
+	.mark-all-read svg {
+		width: 17px;
+		height: 17px;
+	}
+	.new-mail {
+		width: 100%;
+		display: flex;
+		align-items: center;
+		gap: 9px;
+		margin-bottom: var(--space-4);
+		padding: 10px 13px;
+		border: 1px solid var(--accent-soft);
+		border-radius: var(--radius-md);
+		background: var(--accent-subtle);
+		color: var(--accent);
+		font-size: 12px;
+		text-align: left;
+	}
+	.new-mail svg {
+		width: 17px;
+		height: 17px;
+	}
+	.new-mail span {
+		margin-left: auto;
+		color: var(--text-muted);
+		font-size: 10px;
+		text-transform: uppercase;
+	}
+	@keyframes inbox-pulse {
+		50% { opacity: 0.35; transform: scale(0.8); }
+	}
+
+	/* Inbox rows have an extra column for hover-revealed actions. */
+	.msg {
+		grid-template-columns: 8px 32px minmax(0, 1fr) auto;
+	}
+	.attachment {
+		color: var(--accent);
+		font-size: 14px;
+	}
+	.row-actions {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		padding-right: 6px;
+		opacity: 0;
+		transition: opacity var(--transition-fast);
+	}
+	.msg:hover .row-actions,
+	.msg.unread .row-actions {
+		opacity: 1;
+	}
+	.icon-button {
+		width: 28px;
+		height: 28px;
+		display: grid;
+		place-items: center;
+		border: 0;
+		background: transparent;
+		border-radius: var(--radius-sm);
+		color: var(--text-muted);
 		cursor: pointer;
+		font-size: 14px;
 	}
-	.row-select input:checked, .select-all input:checked { background: var(--accent); border-color: var(--accent); }
-	.message-link { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 12px; padding: 12px 14px; color: inherit; min-width: 0; }
-	.message-link:hover { background: var(--bg-elevated); }
-	.avatar { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; background: var(--accent-subtle); color: var(--accent); font-family: var(--font-mono); font-size: 11px; font-weight: 700; flex: none; }
-	.meta { min-width: 0; }
-	.line { display: flex; align-items: baseline; gap: 10px; }
-	.from { font-size: 13px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
-	.time { color: var(--text-muted); font-size: 11px; font-family: var(--font-mono); flex: none; }
-	.subject { margin-top: 3px; font-size: 13px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-	.preview { margin-top: 2px; font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-	.attachment { color: var(--accent); font-size: 14px; }
-	.row-actions { display: flex; align-items: center; gap: 4px; padding-right: 6px; opacity: 0; transition: opacity var(--transition-fast); }
-	.msg:hover .row-actions, .msg.unread .row-actions { opacity: 1; }
-	.icon-button { width: 28px; height: 28px; display: grid; place-items: center; border: 0; background: transparent; border-radius: var(--radius-sm); color: var(--text-muted); cursor: pointer; font-size: 14px; }
-	.icon-button:hover:not(:disabled) { background: var(--bg-elevated); color: var(--text-primary); }
-	.icon-button:disabled { opacity: .4; cursor: wait; }
-	.icon-button.star.active { color: var(--accent); }
-	.icon-button.danger:hover { color: var(--color-danger); }
-	.bulk-bar { display: flex; align-items: center; gap: 12px; padding: 10px 14px; margin-bottom: var(--space-4); }
-	.bulk-bar.has-selection { border-color: var(--accent); }
-	.select-all { display: flex; align-items: center; gap: 9px; font-size: 12px; color: var(--text-secondary); cursor: pointer; }
-	.bulk-actions { margin-left: auto; display: flex; align-items: center; gap: 4px; }
-	.bulk-actions button { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border: 0; background: transparent; border-radius: var(--radius-sm); color: var(--text-secondary); font-size: 12px; cursor: pointer; }
-	.bulk-actions button:hover:not(:disabled) { background: var(--bg-elevated); color: var(--text-primary); }
-	.bulk-actions button:disabled { opacity: .4; cursor: wait; }
-	.bulk-actions button.trash:hover { color: var(--color-danger); }
-	.bulk-actions button svg { width: 14px; height: 14px; }
-	.msg.unread .from, .msg.unread .subject { color: var(--text-primary); font-weight: 600; }
+	.icon-button:hover:not(:disabled) {
+		background: var(--bg-elevated);
+		color: var(--text-primary);
+	}
+	.icon-button:disabled {
+		opacity: 0.4;
+		cursor: wait;
+	}
+	.icon-button.star.active {
+		color: var(--accent);
+	}
+	.icon-button.danger:hover {
+		color: var(--color-danger);
+	}
 	@media (max-width: 720px) {
-		.row-actions { opacity: 1; }
-		.row-select { padding-left: 4px; }
-		.message-link { padding: 10px 10px; }
+		.row-actions {
+			opacity: 1;
+		}
 	}
 </style>
