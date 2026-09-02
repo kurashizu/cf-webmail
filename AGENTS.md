@@ -276,6 +276,12 @@ re-typed during the i18n and quota work.
    non-English locale renders end-to-end (cookie `krsz-lang=ja` or
    `Accept-Language: ja`). Hard-refresh once to bypass the CDN edge cache.
 
+## Git commit conventions
+
+Do not add a `Co-Authored-By: Claude` (or any AI-attribution) trailer to
+commit messages in this repo. This applies to every future commit,
+regardless of tool defaults.
+
 ## License
 
 MIT. See [`LICENSE`](LICENSE).

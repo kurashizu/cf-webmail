@@ -169,7 +169,7 @@
 </script>
 
 <div class="app" class:transitioning class:menu-open={mobileMenuOpen}>
-	<BackgroundVideo src="/video/space-station-floating.av1.mp4" opacity={0.08} />
+	<BackgroundVideo src="/video/space-station-floating.av1.mp4" opacity={0.16} />
 	<Toast />
 	<header class="topbar" class:scrolled={scrolled}>
 		<a href="/inbox" class="brand" aria-label={tt('landing.signInAria', { brand: tt('common.brandName') })}>
@@ -331,6 +331,26 @@
 		flex-direction: column;
 		background: var(--bg-primary);
 		isolation: isolate;
+	}
+
+	/* Let the background video show through every surface in the mail app:
+	 * thin the shared theme surface tokens down to translucent, scoped to
+	 * this subtree only (theme.css keeps them opaque for landing/auth, and
+	 * every child component already reads these same var names, so no
+	 * other file needs touching). Capture the opaque originals under
+	 * --mail-bg-* on :root first — redefining --bg-primary in terms of
+	 * itself on the same element would be a circular var() reference. */
+	:global(:root) {
+		--mail-bg-primary: var(--bg-primary);
+		--mail-bg-secondary: var(--bg-secondary);
+		--mail-bg-card: var(--bg-card);
+		--mail-bg-elevated: var(--bg-elevated);
+	}
+	:global(.app) {
+		--bg-primary: color-mix(in srgb, var(--mail-bg-primary) 55%, transparent);
+		--bg-secondary: color-mix(in srgb, var(--mail-bg-secondary) 55%, transparent);
+		--bg-card: color-mix(in srgb, var(--mail-bg-card) 60%, transparent);
+		--bg-elevated: color-mix(in srgb, var(--mail-bg-elevated) 60%, transparent);
 	}
 
 	:global(.app .bg-video) {
@@ -499,6 +519,8 @@
 	.sidebar {
 		border-right: 1px solid var(--border);
 		background: var(--bg-secondary);
+		backdrop-filter: blur(16px);
+		-webkit-backdrop-filter: blur(16px);
 		padding: var(--space-4);
 		display: flex;
 		flex-direction: column;
