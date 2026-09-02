@@ -2,7 +2,6 @@
 	import '$lib/styles/global.css';
 	import { navigating } from '$app/state';
 	import { initLocale } from '$lib/i18n';
-	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 
 	let { data, children } = $props();
 	let showProgress = $state(false);
@@ -29,7 +28,6 @@
 {#if showProgress}
 	<div class="navigation-progress" role="status" aria-label="Loading page"><span></span></div>
 {/if}
-<ThemeToggle />
 {@render children?.()}
 
 <style>

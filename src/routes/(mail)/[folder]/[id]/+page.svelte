@@ -3,7 +3,6 @@
 	import { onMount } from 'svelte';
 	import { formatAddresses, formatDate, initials } from '$lib/format';
 	import { toastStore } from '$lib/toast';
-	import { themeStore } from '$lib/stores/theme';
 	import { t, type Locale } from '$lib/i18n';
 
 	let { data } = $props();
@@ -56,19 +55,15 @@
 		}
 	}
 
-	/** Dark/light wrapper for the email photos. Parent CSS vars don't cascade
-	 * into a srcdoc iframe, so use literal theme colours, re-derived whenever
-	 * the user flips the theme toggle. Emails that declare their own colours
-	 * keep them; anything without explicit styling falls onto the theme canvas. */
-	function injectBaseStyles(html: string, theme: 'dark' | 'light'): string {
-		const canvas = theme === 'light' ? '#fafbfc' : '#161b23';
-		const link = theme === 'light' ? '#4a8275' : '#7eb3a0';
-		return `<style>:root{color-scheme:${theme}}html{background:${canvas}!important;color-scheme:${theme}}body{background-color:transparent!important}a{color:${link}}</style>${html}`;
+	/** Dark wrapper for the email body. Parent CSS vars don't cascade into a
+	 * srcdoc iframe, so use literal dark-theme colours. Emails that declare
+	 * their own colours keep them; anything without explicit styling falls
+	 * onto the dark canvas. */
+	function injectBaseStyles(html: string): string {
+		return `<style>:root{color-scheme:dark}html{background:#161b23!important;color-scheme:dark}body{background-color:transparent!important}a{color:#7eb3a0}</style>${html}`;
 	}
 
-	// bodyHtml holds the raw fetched HTML; the iframe srcdoc is re-derived from
-	// it on every theme change so the rendered mail follows the switch.
-	const emailSrcdoc = $derived(bodyHtml ? injectBaseStyles(bodyHtml, $themeStore) : '');
+	const emailSrcdoc = $derived(bodyHtml ? injectBaseStyles(bodyHtml) : '');
 
 	async function fetchBody(kind: 'html' | 'text') {
 		const has = kind === 'html' ? data.message.hasHtml : data.message.hasText;

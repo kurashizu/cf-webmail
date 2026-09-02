@@ -1,12 +1,11 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 		<meta name="text-scale" content="scale" />
-		<meta name="theme-color" content="#0d1116" media="(prefers-color-scheme: dark)" />
-		<meta name="theme-color" content="#e6e9ed" media="(prefers-color-scheme: light)" />
-		<meta name="color-scheme" content="dark light" />
+		<meta name="theme-color" content="#0d1116" />
+		<meta name="color-scheme" content="dark" />
 		<meta name="apple-mobile-web-app-capable" content="yes" />
 		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 		<meta name="apple-mobile-web-app-title" content="KRSZ Mail" />
@@ -26,13 +25,6 @@
 		/>
 		%sveltekit.head%
 		<script>
-			// Apply the persisted theme before first paint to avoid a flash.
-			(function () {
-				var saved = null;
-				try { saved = localStorage.getItem('krsz-theme'); } catch (e) { /* ignore */ }
-				var theme = saved === 'light' ? 'light' : 'dark';
-				document.documentElement.setAttribute('data-theme', theme);
-			})();
 			// Register the service worker that ships from /sw.js. Skip in
 			// environments where Service Worker isn't available (SSR, sandboxes).
 			if ('serviceWorker' in navigator) {
