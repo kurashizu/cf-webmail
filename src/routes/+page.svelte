@@ -2,6 +2,7 @@
 	import type { PageData } from './$types';
 	import { t } from '$lib/i18n';
 	import LanguagePicker from '$lib/components/LanguagePicker.svelte';
+	import BackgroundVideo from '$lib/components/BackgroundVideo.svelte';
 
 	let { data }: { data: PageData } = $props();
 	const tt = (key: string, params?: Record<string, string | number>) =>
@@ -28,6 +29,7 @@
 </svelte:head>
 
 <main class="landing">
+	<BackgroundVideo src="/video/space-station-orbiting.av1.mp4" opacity={0.4} />
 	<div class="ambient" aria-hidden="true"></div>
 
 	<header>
@@ -85,6 +87,7 @@
 <style>
 	:global(body) { background: var(--bg-primary); }
 	.landing { position: relative; min-height: 100vh; overflow: hidden; display: flex; flex-direction: column; isolation: isolate; }
+	:global(.landing .bg-video) { z-index: -2; }
 	.ambient { position: absolute; inset: 0; z-index: -1; pointer-events: none; background: radial-gradient(circle at 50% 35%, var(--accent-subtle), transparent 26rem), linear-gradient(rgba(216,226,235,.022) 1px, transparent 1px), linear-gradient(90deg, rgba(216,226,235,.022) 1px, transparent 1px); background-size: auto, 64px 64px, 64px 64px; mask-image: linear-gradient(to bottom, black 0%, transparent 78%); }
 	header { padding: 0 var(--space-6); }
 	nav { width: min(1120px, 100%); height: 88px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }

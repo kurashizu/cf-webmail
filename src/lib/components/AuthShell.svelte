@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import BackgroundVideo from '$lib/components/BackgroundVideo.svelte';
 	let { children, title, subtitle, footer }: {
 		children: Snippet;
 		title: string;
@@ -10,6 +11,7 @@
 
 <div class="auth-page">
 	<div class="bg-glow"></div>
+	<BackgroundVideo src="/video/space-station-orbiting.av1.mp4" opacity={0.4} />
 
 	<header>
 		<a href="/" class="brand">
@@ -41,6 +43,9 @@
 		min-height: 100vh;
 		display: flex;
 		flex-direction: column;
+		background: var(--bg-primary);
+		overflow: hidden;
+		isolation: isolate;
 	}
 
 	.bg-glow {
@@ -51,6 +56,11 @@
 			radial-gradient(ellipse at 30% 20%, var(--accent-subtle) 0%, transparent 55%),
 			radial-gradient(ellipse at 70% 80%, var(--accent-subtle) 0%, transparent 55%);
 		z-index: 0;
+	}
+
+	:global(.auth-page .bg-video) {
+		position: fixed;
+		z-index: -1;
 	}
 
 	header {

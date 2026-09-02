@@ -6,6 +6,7 @@
 	import { onMount } from 'svelte';
 	import Toast from '$lib/components/Toast.svelte';
 	import LanguagePicker from '$lib/components/LanguagePicker.svelte';
+	import BackgroundVideo from '$lib/components/BackgroundVideo.svelte';
 	import { registerMailShortcuts } from '$lib/shortcuts';
 	import { t, type Locale } from '$lib/i18n';
 
@@ -168,6 +169,7 @@
 </script>
 
 <div class="app" class:transitioning class:menu-open={mobileMenuOpen}>
+	<BackgroundVideo src="/video/space-station-floating.av1.mp4" opacity={0.08} />
 	<Toast />
 	<header class="topbar" class:scrolled={scrolled}>
 		<a href="/inbox" class="brand" aria-label={tt('landing.signInAria', { brand: tt('common.brandName') })}>
@@ -321,11 +323,19 @@
 <style>
 	.app {
 		/* Lock the shell to the viewport so the sidebar never stretches or scrolls. */
+		position: relative;
 		height: 100vh;
 		height: 100dvh;
 		overflow: hidden;
 		display: flex;
 		flex-direction: column;
+		background: var(--bg-primary);
+		isolation: isolate;
+	}
+
+	:global(.app .bg-video) {
+		position: fixed;
+		z-index: -1;
 	}
 
 	.topbar {

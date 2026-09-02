@@ -5,12 +5,7 @@ export interface ShortcutMap {
 	[key: string]: () => void;
 }
 
-let registered = false;
-
 export function registerMailShortcuts(map: ShortcutMap): () => void {
-	if (registered) return () => {};
-	registered = true;
-
 	function handler(event: KeyboardEvent) {
 		// Don't fire when typing in inputs/textarea/contenteditable
 		const tag = (event.target as HTMLElement)?.tagName;
@@ -39,7 +34,7 @@ export function registerMailShortcuts(map: ShortcutMap): () => void {
 
 		// Single letter keys
 		if (key === 'c') { event.preventDefault(); map['compose']?.(); }
-		else if (key === 'r' || key === 'R') { event.preventDefault(); map['reply']?.(); }
+		else if (key === 'r') { event.preventDefault(); map['reply']?.(); }
 		else if (key === 'u') { event.preventDefault(); map['markUnread']?.(); }
 		else if (key === 's') { event.preventDefault(); map['star']?.(); }
 		else if (key === '#') { event.preventDefault(); map['trash']?.(); }
@@ -51,6 +46,5 @@ export function registerMailShortcuts(map: ShortcutMap): () => void {
 	document.addEventListener('keydown', handler);
 	return () => {
 		document.removeEventListener('keydown', handler);
-		registered = false;
 	};
 }
