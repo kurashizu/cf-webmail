@@ -177,7 +177,7 @@
 									<div class="metric-sub">
 										<span>{formatCount(storage.message_count)} / {storage.quota_messages ? formatCount(storage.quota_messages) : '∞'} {tt('settings.storageMessagesLabel')}</span>
 										<span class="dot" aria-hidden="true">·</span>
-										<span>{formatBytes(Math.max(storage.quota_bytes - storage.used_bytes, 0))} {tt('settings.storageRemaining')}</span>
+										<span>{storage.quota_bytes ? tt('settings.storageRemaining', { remaining: formatBytes(Math.max(storage.quota_bytes - storage.used_bytes, 0)) }) : tt('settings.storageQuotaUnlimited')}</span>
 									</div>
 								</div>
 
