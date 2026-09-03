@@ -265,6 +265,7 @@
 		font-size: 12px;
 		color: var(--text-secondary);
 		line-height: 1.5;
+		text-wrap: balance;
 	}
 	.error {
 			padding: var(--space-3);
@@ -276,7 +277,7 @@
 		}
 	.hint { text-align: center; font-size: 13px; color: var(--text-secondary); margin: 0; }
 	.hint a { color: var(--accent); }
-	.terms-hint { text-align: center; font-size: 11px; line-height: 1.5; color: var(--text-secondary); margin: 0; }
+	.terms-hint { text-align: center; font-size: 11px; line-height: 1.5; color: var(--text-secondary); margin: 0; text-wrap: balance; }
 	.terms-hint a { color: var(--accent); }
 	.footer-row {
 		display: flex;

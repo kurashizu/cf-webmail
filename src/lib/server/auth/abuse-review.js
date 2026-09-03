@@ -70,20 +70,23 @@ export async function reviewRegistration({ db, geminiApiKey, geminiModel, localP
 
 	const model = geminiModel || DEFAULT_GEMINI_MODEL;
 
-	// Production has shown the model itself is sometimes just slow to respond
-	// (not a network blip) — the registration form now shows a "reviewing…"
-	// state with a spinner while this runs, so there's real room to wait
-	// rather than racing an aggressive timeout. Two attempts at ~28s each
-	// give roughly a minute of total tolerance while still guaranteeing a
-	// registration eventually resolves instead of hanging indefinitely.
+	// Production has repeatedly timed out even at 28s — but direct calls to
+	// the same model/endpoint from outside Workers consistently return in
+	// 2.5-3.7s, so this is very likely something specific to the Workers →
+	// Google network path (or the fetch() call itself), not the model being
+	// slow. Timed logs here (visible via `wrangler tail`) are how we find out
+	// which. The registration form shows a "reviewing…" state while this
+	// runs, so there's real room to wait once we know what we're waiting on.
 	let lastErrorDetail = '';
 	for (let attempt = 1; attempt <= 2; attempt++) {
+		const startedAt = Date.now();
 		try {
 			const modelVerdict = await callGemini(geminiApiKey, model, { localPart, note, signals, userAgent });
+			console.log(`[abuse-review] Gemini call attempt ${attempt} succeeded in ${Date.now() - startedAt}ms`);
 			return { ...modelVerdict, signals };
 		} catch (err) {
 			lastErrorDetail = err instanceof Error ? err.message : String(err);
-			console.error(`[abuse-review] Gemini call attempt ${attempt} failed`, lastErrorDetail);
+			console.error(`[abuse-review] Gemini call attempt ${attempt} failed after ${Date.now() - startedAt}ms:`, lastErrorDetail);
 		}
 	}
 
