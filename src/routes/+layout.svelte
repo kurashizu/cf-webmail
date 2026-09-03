@@ -68,24 +68,26 @@
 
 	.build-info {
 		position: fixed;
-		right: 8px;
-		bottom: 6px;
-		z-index: 10;
-		padding: 2px 6px;
+		right: 10px;
+		bottom: 8px;
+		z-index: 200;
+		padding: 3px 8px;
+		border: 1px solid var(--border);
 		border-radius: var(--radius-sm);
+		background: var(--bg-card);
 		font-family: var(--font-mono);
-		font-size: 9px;
+		font-size: 11px;
 		letter-spacing: 0.02em;
-		color: var(--text-muted);
-		opacity: 0.35;
+		color: var(--text-secondary);
 		text-decoration: none;
 		pointer-events: auto;
-		transition: opacity var(--transition-fast);
+		box-shadow: var(--shadow-sm);
+		transition: color var(--transition-fast), border-color var(--transition-fast);
 	}
 	.build-info:hover,
 	.build-info:focus-visible {
-		opacity: 1;
-		color: var(--text-secondary);
+		color: var(--accent);
+		border-color: var(--accent-soft);
 	}
 	@media (max-width: 680px) {
 		.build-info { display: none; }
