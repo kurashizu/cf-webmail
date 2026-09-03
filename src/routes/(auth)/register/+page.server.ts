@@ -103,7 +103,11 @@ export const actions: Actions = {
 			passwordHash,
 			passwordSalt: salt,
 			passwordIters: 100_000,
-			role: 'user'
+			role: 'user',
+			// Invite-only registration always lands on R2. Open registration
+			// (not yet built) is expected to default new accounts to the S3
+			// backend instead — see storage_backend in migration 0004.
+			storageBackend: 'r2'
 		});
 		await ensureFolders(platform.env.DB, id);
 				await consumeInvite(platform.env.DB, codeHash, id);

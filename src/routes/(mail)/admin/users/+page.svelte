@@ -21,6 +21,8 @@
 	let generated = $state<any | null>(null);
 	let newPassword = $state('');
 	let deleteConfirmation = $state('');
+	let quotaMb = $state('0');
+	let quotaMessages = $state('0');
 	let copied = $state('');
 
 	const filteredUsers = $derived(
@@ -108,6 +110,8 @@
 	}
 	function openUser(user: any) {
 		selected = { ...user };
+		quotaMb = user.quota_bytes ? String(Math.round(Number(user.quota_bytes) / (1024 * 1024))) : '0';
+		quotaMessages = String(Number(user.quota_messages) || 0);
 		modal = null;
 		message = null;
 	}
@@ -128,9 +132,13 @@
 					? 'Resetting password…'
 					: action === 'revoke_sessions'
 						? 'Signing out user…'
-						: action === 'disable'
-							? 'Disabling mailbox…'
-							: 'Enabling mailbox…';
+						: action === 'set_quota'
+							? 'Saving quota…'
+							: action === 'set_storage_backend'
+								? 'Changing storage backend…'
+								: action === 'disable'
+									? 'Disabling mailbox…'
+									: 'Enabling mailbox…';
 		message = null;
 		try {
 			const result = await requestJson('/api/admin/users', {
@@ -159,6 +167,27 @@
 			busy = null;
 			busyLabel = '';
 		}
+	}
+
+	async function saveQuota() {
+		const mb = Number(quotaMb);
+		const messages = Number(quotaMessages);
+		if (!Number.isFinite(mb) || mb < 0) {
+			message = { kind: 'error', text: 'Storage quota must be 0 (unlimited) or a positive number of MB.' };
+			return;
+		}
+		if (!Number.isFinite(messages) || messages < 0) {
+			message = { kind: 'error', text: 'Message quota must be 0 (unlimited) or a positive number.' };
+			return;
+		}
+		await userAction('set_quota', {
+			quota_bytes: mb === 0 ? 0 : Math.round(mb * 1024 * 1024),
+			quota_messages: messages
+		});
+	}
+
+	async function setStorageBackend(backend: string) {
+		await userAction('set_storage_backend', { storage_backend: backend });
 	}
 
 	async function deleteUser() {
@@ -419,7 +448,7 @@
 									<br />
 									<small>{tt('admin.users.unreadBadge', { count: user.unread_count || 0 })}</small>
 								</td>
-								<td>{formatBytes(Number(user.storage_bytes || 0))}</td>
+								<td>{formatBytes(Number(user.storage_used_bytes || 0))}</td>
 								<td
 									>{user.last_message_at
 										? new Date(user.last_message_at).toLocaleDateString()
@@ -566,7 +595,7 @@
 					</div>
 					<div>
 						<span>Storage</span>
-						<strong>{formatBytes(Number(selected.storage_bytes || 0))}</strong>
+						<strong>{formatBytes(Number(selected.storage_used_bytes || 0))}</strong>
 					</div>
 					<div>
 						<span>Session</span>
@@ -598,6 +627,47 @@
 							userAction('update', { display_name: selected.display_name, role: selected.role })}
 						>Save changes</button
 					>
+				</section>
+
+				<section>
+					<h3>Storage</h3>
+					<label
+						>Storage quota (MB, 0 = unlimited)<input
+							type="number"
+							min="0"
+							step="1"
+							bind:value={quotaMb}
+						/></label
+					>
+					<label
+						>Message quota (0 = unlimited)<input
+							type="number"
+							min="0"
+							step="1"
+							bind:value={quotaMessages}
+						/></label
+					>
+					<p class="help">
+						Storage quota must be 0 (unlimited) or at least 100 MB; message quota tops out at
+						50,000.
+					</p>
+					<button class="btn btn-primary" disabled={busy === selected.id} onclick={saveQuota}
+						>Save quota</button
+					>
+
+					<label
+						>Storage backend<select
+							value={selected.storage_backend || 'r2'}
+							onchange={(e) => setStorageBackend((e.target as HTMLSelectElement).value)}
+							disabled={busy === selected.id}
+							><option value="r2">Cloudflare R2</option>
+							<option value="minio_s3">S3 (MinIO)</option></select
+						></label
+					>
+					<p class="help">
+						Only affects where <em>new</em> mail for this account is written. Existing messages
+						stay on whichever backend they were originally stored on.
+					</p>
 				</section>
 
 				{#if selected.id !== data.user.accountId}

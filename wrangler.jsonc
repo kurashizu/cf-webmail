@@ -38,7 +38,14 @@
 		"MAIL_ZONE_ID": "409d8fcbeeaaf3ee7b4be2f8f626b440",
 		"WORKER_NAME": "cf-webmail",
 		"DEFAULT_PAGE_SIZE": "10",
-		"MAX_ATTACHMENT_SIZE": "26214400"
+		"MAX_ATTACHMENT_SIZE": "26214400",
+
+		// Second storage backend — self-hosted MinIO (S3-compatible), path-style
+		// addressing. S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY are set via
+		// `wrangler secret put`, not here.
+		"S3_ENDPOINT": "https://s3api.022025.xyz",
+		"S3_BUCKET": "krsz-mail",
+		"S3_REGION": "us-east-1"
 	},
 
 	"observability": {

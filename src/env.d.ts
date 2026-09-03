@@ -16,4 +16,11 @@ interface Env {
 	CF_API_TOKEN: string;
 		MAIL_ZONE_ID: string;
 		WORKER_NAME: string;
+		// Second storage backend — self-hosted S3-compatible (MinIO), used for
+		// accounts with accounts.storage_backend = 'minio_s3'.
+		S3_ENDPOINT?: string;
+		S3_BUCKET?: string;
+		S3_REGION?: string;
+		S3_ACCESS_KEY_ID?: string;
+		S3_SECRET_ACCESS_KEY?: string;
 	}

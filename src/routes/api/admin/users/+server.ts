@@ -10,6 +10,7 @@ import {
 } from '$lib/server/db/queries';
 import { hashPassword, newSalt } from '$lib/server/crypto/kdf';
 import { MAX_QUOTA_BYTES, MIN_QUOTA_BYTES, MAX_QUOTA_MESSAGES } from '$lib/server/db/storage';
+import { getStorageForAccount, isStorageConfigured, STORAGE_BACKENDS } from '$lib/server/storage';
 
 const PASSWORD_ITERATIONS = 100_000;
 
@@ -51,6 +52,7 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 			password?: string;
 			quota_bytes?: number;
 			quota_messages?: number;
+			storage_backend?: string;
 		};
 	if (!body.id || !body.action) throw error(400, 'Missing user action');
 	const account: any = await findAccountById(env.DB, body.id);
@@ -116,6 +118,24 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 						.run();
 					break;
 				}
+				case 'set_storage_backend': {
+					// Only changes where NEW writes for this account land — existing
+					// message bodies/attachments already written under the old backend
+					// are not migrated, so old mail stays readable from wherever it was
+					// originally stored (storage.js resolves per-account, not globally).
+					const backend = String(body.storage_backend || '');
+					if (!STORAGE_BACKENDS.includes(backend)) {
+						throw error(400, `Storage backend must be one of: ${STORAGE_BACKENDS.join(', ')}.`);
+					}
+					if (!isStorageConfigured(backend, env)) {
+						throw error(409, `The ${backend} backend is not configured on this deployment.`);
+					}
+					await env.DB
+						.prepare('UPDATE accounts SET storage_backend = ?, updated_at = ? WHERE id = ?')
+						.bind(backend, Date.now(), body.id)
+						.run();
+					break;
+				}
 		default:
 			throw error(400, 'Invalid user action');
 	}
@@ -130,6 +150,7 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 				quota_bytes: Number(updated.quota_bytes ?? 0),
 				quota_messages: Number(updated.quota_messages ?? 0),
 				storage_used_bytes: Number(updated.storage_used_bytes ?? 0),
+				storage_backend: updated.storage_backend || 'r2',
 				disabled: (await env.SESSIONS.get(`disabled:${body.id}`)) === '1',
 				has_session: Boolean(await env.SESSIONS.get(`session:${body.id}`))
 			} : null
@@ -148,9 +169,10 @@ export const DELETE: RequestHandler = async ({ locals, platform, request }) => {
 	if (account.role === 'admin' && await adminCount(env.DB) <= 1) throw error(409, 'The last administrator cannot be deleted.');
 
 	const keys = await listAccountStorageKeys(env.DB, body.id);
-	if (env.MAIL && keys.length) {
+	const storage = getStorageForAccount(account, env);
+	if (storage && keys.length) {
 		for (let offset = 0; offset < keys.length; offset += 1000) {
-			await env.MAIL.delete(keys.slice(offset, offset + 1000));
+			await storage.delete(keys.slice(offset, offset + 1000));
 		}
 	}
 	await deleteAccountData(env.DB, body.id);

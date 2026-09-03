@@ -1,19 +1,22 @@
 import type { RequestHandler } from './$types';
 import { error, json } from '@sveltejs/kit';
-import { emptyTrash, listTrashStorageKeys } from '$lib/server/db/queries';
+import { emptyTrash, listTrashStorageKeys, getAccountStorageBackend } from '$lib/server/db/queries';
 import { resetStorageUsed, reconcileStorageUsed } from '$lib/server/db/storage';
+import { getStorage } from '$lib/server/storage';
 
-const R2_DELETE_BATCH_SIZE = 1000;
+const STORAGE_DELETE_BATCH_SIZE = 1000;
 
 export const DELETE: RequestHandler = async ({ locals, platform }) => {
 	if (!locals.user) throw error(401, 'Unauthorized');
 	const env = platform!.env;
 	const accountId = locals.user.accountId;
 
+	const backend = await getAccountStorageBackend(env.DB, accountId);
+	const storage = getStorage(backend, env);
 	const storageKeys = await listTrashStorageKeys(env.DB, accountId);
-	if (env.MAIL && storageKeys.length) {
-		for (let index = 0; index < storageKeys.length; index += R2_DELETE_BATCH_SIZE) {
-			await env.MAIL.delete(storageKeys.slice(index, index + R2_DELETE_BATCH_SIZE));
+	if (storage && storageKeys.length) {
+		for (let index = 0; index < storageKeys.length; index += STORAGE_DELETE_BATCH_SIZE) {
+			await storage.delete(storageKeys.slice(index, index + STORAGE_DELETE_BATCH_SIZE));
 		}
 	}
 

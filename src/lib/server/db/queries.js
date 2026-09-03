@@ -43,6 +43,18 @@ export async function findAccountById(db, id) {
 }
 
 /**
+ * Look up just the storage backend for an account — a lean query for API
+ * routes that only need to pick the right storage adapter, not the full row.
+ */
+export async function getAccountStorageBackend(db, id) {
+	const row = await db
+		.prepare('SELECT storage_backend FROM accounts WHERE id = ?')
+		.bind(id)
+		.first();
+	return row?.storage_backend || 'r2';
+}
+
+/**
  * Create a new account.
  */
 export async function createAccount(db, account) {
@@ -52,8 +64,8 @@ export async function createAccount(db, account) {
 			`INSERT INTO accounts (
 				id, local_part, email, display_name,
 				password_hash, password_salt, password_iters,
-				role, created_at, updated_at
-			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+				role, storage_backend, created_at, updated_at
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 		)
 		.bind(
 			account.id,
@@ -64,6 +76,7 @@ export async function createAccount(db, account) {
 			account.passwordSalt,
 			account.passwordIters ?? 600_000,
 			account.role ?? 'user',
+			account.storageBackend ?? 'r2',
 			now,
 			now
 		)
@@ -91,7 +104,7 @@ export async function listAccounts(db) {
 		.prepare(
 			`SELECT a.id, a.local_part, a.email, a.display_name, a.role,
 			        a.created_at, a.updated_at,
-			        a.quota_bytes, a.quota_messages, a.storage_used_bytes,
+			        a.quota_bytes, a.quota_messages, a.storage_used_bytes, a.storage_backend,
 			        COUNT(DISTINCT m.id) AS message_count,
 			        COALESCE(SUM(CASE WHEN m.folder = 'INBOX' AND m.flags NOT LIKE '%\\Seen%' THEN 1 ELSE 0 END), 0) AS unread_count,
 			        MAX(m.received_at) AS last_message_at,

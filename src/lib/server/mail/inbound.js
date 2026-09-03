@@ -4,6 +4,7 @@
 
 import { findAccountByLocalPart, ensureFolders, insertMessage, insertAttachment, bumpFolderOnReceive, uuid } from '../db/queries.js';
 import { assertQuota, addStorageUsed, StorageQuotaError } from '../db/storage.js';
+import { getStorageForAccount } from '../storage/index.js';
 
 async function handleInbound(message, env, ctx) {
 	const recipient = (message.to || '').trim().toLowerCase();
@@ -22,6 +23,7 @@ async function handleInbound(message, env, ctx) {
 	}
 
 	const accountId = account.id;
+		const storage = getStorageForAccount(account, env);
 		await ensureFolders(env.DB, accountId);
 
 		// Read raw stream into a buffer for parsing + size measurement.
@@ -90,21 +92,21 @@ async function handleInbound(message, env, ctx) {
 	try {
 		if (parsed.html) {
 			bodyHtmlKey = bodyKey(accountId, folder, newId, 'html');
-			await env.MAIL.put(bodyHtmlKey, parsed.html, {
+			await storage.put(bodyHtmlKey, parsed.html, {
 				httpMetadata: { contentType: 'text/html; charset=utf-8' }
 			});
 			storedKeys.push(bodyHtmlKey);
 		}
 		if (parsed.text) {
 			bodyTextKey = bodyKey(accountId, folder, newId, 'txt');
-			await env.MAIL.put(bodyTextKey, parsed.text, {
+			await storage.put(bodyTextKey, parsed.text, {
 				httpMetadata: { contentType: 'text/plain; charset=utf-8' }
 			});
 			storedKeys.push(bodyTextKey);
 		}
 
 		for (const att of attachmentRecords) {
-			await env.MAIL.put(att.r2Key, att.data, {
+			await storage.put(att.r2Key, att.data, {
 				httpMetadata: { contentType: att.mimeType }
 			});
 			storedKeys.push(att.r2Key);
@@ -119,7 +121,7 @@ async function handleInbound(message, env, ctx) {
 					await assertQuota(env.DB, accountId, incomingBytes, 1);
 				} catch (err) {
 					if (err instanceof StorageQuotaError) {
-						await deleteStoredObjects(env.MAIL, storedKeys);
+						await deleteStoredObjects(storage, storedKeys);
 						console.warn('[inbound] precise quota exceeded, rejecting', { recipient, err: err.message });
 						message.setReject('Mailbox full');
 						return;
@@ -150,7 +152,7 @@ async function handleInbound(message, env, ctx) {
 		});
 
 		if (!inserted) {
-			await deleteStoredObjects(env.MAIL, storedKeys);
+			await deleteStoredObjects(storage, storedKeys);
 			console.info('[inbound] duplicate message ignored', { recipient, messageId });
 			return;
 		}
@@ -175,7 +177,7 @@ async function handleInbound(message, env, ctx) {
 			} catch (error) {
 		await env.DB.prepare('DELETE FROM attachments WHERE account_id = ? AND message_id = ?').bind(accountId, newId).run().catch(() => {});
 		await env.DB.prepare('DELETE FROM messages WHERE account_id = ? AND id = ?').bind(accountId, newId).run().catch(() => {});
-		await deleteStoredObjects(env.MAIL, storedKeys);
+		await deleteStoredObjects(storage, storedKeys);
 		console.error('[inbound] persistence failed', {
 			recipient,
 			messageId,

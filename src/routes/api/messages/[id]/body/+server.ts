@@ -1,18 +1,22 @@
 import type { RequestHandler } from './$types';
 import { error, json } from '@sveltejs/kit';
-import { getMessage, updateFlags } from '$lib/server/db/queries';
+import { getMessage, getAccountStorageBackend, updateFlags } from '$lib/server/db/queries';
+import { getStorage } from '$lib/server/storage';
 
 export const GET: RequestHandler = async ({ params, locals, platform, url }) => {
 	if (!locals.user) throw error(401, 'Unauthorized');
-	const msg = await getMessage(platform!.env.DB, locals.user.accountId, params.id);
+	const env = platform!.env;
+	const msg = await getMessage(env.DB, locals.user.accountId, params.id);
 	if (!msg) throw error(404, 'Not found');
 
 	const kind = (url.searchParams.get('kind') || 'text').toLowerCase();
 	const key = kind === 'html' ? msg.body_html_key : msg.body_text_key;
 	if (!key) throw error(404, `${kind} body not available`);
 
-	if (!platform!.env.MAIL) throw error(503, 'Attachment storage is unavailable');
-	const obj = await platform!.env.MAIL.get(key);
+	const backend = await getAccountStorageBackend(env.DB, locals.user.accountId);
+	const storage = getStorage(backend, env);
+	if (!storage) throw error(503, 'Attachment storage is unavailable');
+	const obj = await storage.get(key);
 	if (!obj) throw error(404, 'Body missing in storage');
 	const body = await obj.text();
 	return json({ ok: true, body });

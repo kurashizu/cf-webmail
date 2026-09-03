@@ -37,12 +37,17 @@ function injectEmailHandler(): Plugin {
 			);
 			workerSource = workerSource.replace(/\bvar\s+worker_default\b/g, 'var __skDefault');
 
-			// Read the inbound module(s). We need both inbound.js (pipeline)
-						// and db/queries.js (its only dependency).
+			// Read the inbound module(s) and their plain-JS dependency graph.
+						// This is a manual allowlist, not a real bundler — every plain-JS
+						// module inbound.js imports (transitively) must be listed here or
+						// its exports silently vanish at runtime (ReferenceError on call).
 			const sources = [
 				readFileSync('src/lib/server/mail/inbound.js', 'utf-8'),
 				readFileSync('src/lib/server/db/storage.js', 'utf-8'),
-				readFileSync('src/lib/server/db/queries.js', 'utf-8')
+				readFileSync('src/lib/server/db/queries.js', 'utf-8'),
+				readFileSync('src/lib/server/storage/index.js', 'utf-8'),
+				readFileSync('src/lib/server/storage/r2.js', 'utf-8'),
+				readFileSync('src/lib/server/storage/s3.js', 'utf-8')
 			];
 
 			const stripImports = (s: string) =>

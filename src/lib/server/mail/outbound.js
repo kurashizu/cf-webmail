@@ -4,6 +4,7 @@
 
 import { bumpFolderOnReceive, findAccountByEmail, findAccountById, insertAttachment, insertMessage, uuid } from '../db/queries.js';
 import { assertQuota, addStorageUsed, StorageQuotaError } from '../db/storage.js';
+import { getStorageForAccount } from '../storage/index.js';
 
 const DEFAULT_DOMAIN = 'krsz.in';
 
@@ -11,6 +12,7 @@ export async function sendOutbound(input, env) {
 	try {
 		const account = await findAccountById(env.DB, input.accountId);
 		if (!account) return { ok: false, error: 'Account not found', status: 404 };
+		const storage = getStorageForAccount(account, env);
 
 	const to = normaliseList(input.to);
 	if (!to.length) return { ok: false, error: 'At least one recipient required', status: 400 };
@@ -110,11 +112,11 @@ export async function sendOutbound(input, env) {
 		// Bump sender's cached usage now that the message + attachments are persisted.
 		await addStorageUsed(env.DB, input.accountId, outgoingApproxBytes);
 
-		if (env.MAIL) {
-		await env.MAIL.put(bodyTextKey, input.text || '', {
+		if (storage) {
+		await storage.put(bodyTextKey, input.text || '', {
 			httpMetadata: { contentType: 'text/plain; charset=utf-8' }
 		});
-		await env.MAIL.put(bodyHtmlKey, input.html || '', {
+		await storage.put(bodyHtmlKey, input.html || '', {
 			httpMetadata: { contentType: 'text/html; charset=utf-8' }
 		});
 	}
@@ -143,10 +145,10 @@ export async function sendOutbound(input, env) {
 	});
 
 	for (const attachment of attachments) {
-		if (!env.MAIL) break;
+		if (!storage) break;
 		const attachmentId = uuid();
 		const key = attachmentKey(input.accountId, newId, attachmentId, attachment.filename);
-		await env.MAIL.put(key, attachment.content, {
+		await storage.put(key, attachment.content, {
 			httpMetadata: { contentType: attachment.mimeType || 'application/octet-stream' }
 		});
 		await insertAttachment(env.DB, {
@@ -188,6 +190,7 @@ async function deliverLocal(input, env) {
 	const folder = 'INBOX';
 	const id = uuid();
 	const receivedAt = Date.now();
+	const storage = getStorageForAccount(input.account, env);
 
 	// Quota guard for the recipient. If full, silently drop the local copy —
 	// the external Resend delivery has already been (or will be) made, so the
@@ -214,9 +217,9 @@ async function deliverLocal(input, env) {
 
 	const bodyTextKey = bodyKey(input.account.id, folder, id, 'txt');
 	const bodyHtmlKey = bodyKey(input.account.id, folder, id, 'html');
-	if (env.MAIL) {
-		await env.MAIL.put(bodyTextKey, input.text || '', { httpMetadata: { contentType: 'text/plain; charset=utf-8' } });
-		await env.MAIL.put(bodyHtmlKey, input.html || '', { httpMetadata: { contentType: 'text/html; charset=utf-8' } });
+	if (storage) {
+		await storage.put(bodyTextKey, input.text || '', { httpMetadata: { contentType: 'text/plain; charset=utf-8' } });
+		await storage.put(bodyHtmlKey, input.html || '', { httpMetadata: { contentType: 'text/html; charset=utf-8' } });
 	}
 	await insertMessage(env.DB, {
 			id,
@@ -239,10 +242,10 @@ async function deliverLocal(input, env) {
 			receivedAt
 		});
 	for (const attachment of input.attachments) {
-		if (!env.MAIL) break;
+		if (!storage) break;
 		const attachmentId = uuid();
 		const key = attachmentKey(input.account.id, id, attachmentId, attachment.filename);
-		await env.MAIL.put(key, attachment.content, { httpMetadata: { contentType: attachment.mimeType || 'application/octet-stream' } });
+		await storage.put(key, attachment.content, { httpMetadata: { contentType: attachment.mimeType || 'application/octet-stream' } });
 		await insertAttachment(env.DB, {
 					id: attachmentId,
 					accountId: input.account.id,

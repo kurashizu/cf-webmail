@@ -29,6 +29,14 @@ declare global {
 				DEFAULT_PAGE_SIZE: string;
 				MAX_ATTACHMENT_SIZE: string;
 
+				// Second storage backend — self-hosted S3-compatible (MinIO), used
+				// for accounts with accounts.storage_backend = 'minio_s3'.
+				S3_ENDPOINT?: string;
+				S3_BUCKET?: string;
+				S3_REGION?: string;
+				S3_ACCESS_KEY_ID?: string;
+				S3_SECRET_ACCESS_KEY?: string;
+
 				// Secrets
 				JWT_SECRET: string;
 				RESEND_API_KEY: string;

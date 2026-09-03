@@ -1,6 +1,7 @@
 import type { RequestHandler } from './$types';
 import { error, json } from '@sveltejs/kit';
-import { getDraft, upsertDraft, deleteDraft, uuid } from '$lib/server/db/queries';
+import { getDraft, upsertDraft, deleteDraft, uuid, getAccountStorageBackend } from '$lib/server/db/queries';
+import { getStorage } from '$lib/server/storage';
 
 function parseList(raw: unknown): { addr: string; name: null }[] {
 	if (!raw) return [];
@@ -32,12 +33,17 @@ export const GET: RequestHandler = async ({ locals, platform, url }) => {
 	if (!locals.user) throw error(401, 'Unauthorized');
 	const id = String(url.searchParams.get('id') || '');
 	if (!id) throw error(400, 'Missing id');
-	const draft = await getDraft(platform!.env.DB, locals.user.accountId, id);
+	const env = platform!.env;
+	const draft = await getDraft(env.DB, locals.user.accountId, id);
 	if (!draft) throw error(404, 'Draft not found');
 	let text = '';
-	if (draft.body_text_key && platform!.env.MAIL) {
-		const obj = await platform!.env.MAIL.get(draft.body_text_key);
-		if (obj) text = await obj.text();
+	if (draft.body_text_key) {
+		const backend = await getAccountStorageBackend(env.DB, locals.user.accountId);
+		const storage = getStorage(backend, env);
+		if (storage) {
+			const obj = await storage.get(draft.body_text_key);
+			if (obj) text = await obj.text();
+		}
 	}
 	return json({
 		ok: true,
@@ -68,8 +74,10 @@ export const PUT: RequestHandler = async ({ request, locals, platform }) => {
 	const text = String(data.text || '');
 	const subject = String(data.subject || '').slice(0, 200);
 	const bodyTextKey = draftBodyKey(locals.user.accountId, draftId);
-	if (env.MAIL) {
-		await env.MAIL.put(bodyTextKey, text, {
+	const backend = await getAccountStorageBackend(env.DB, locals.user.accountId);
+	const storage = getStorage(backend, env);
+	if (storage) {
+		await storage.put(bodyTextKey, text, {
 			httpMetadata: { contentType: 'text/plain; charset=utf-8' }
 		});
 	}
@@ -90,9 +98,11 @@ export const DELETE: RequestHandler = async ({ locals, platform, url }) => {
 	const id = String(url.searchParams.get('id') || '');
 	if (!id || !ID_RE.test(id)) throw error(400, 'Missing id');
 	const key = await deleteDraft(env.DB, locals.user.accountId, id);
-	if (key && env.MAIL) {
+	if (key) {
+		const backend = await getAccountStorageBackend(env.DB, locals.user.accountId);
+		const storage = getStorage(backend, env);
 		try {
-			await env.MAIL.delete(key);
+			if (storage) await storage.delete(key);
 		} catch {
 			/* best effort */
 		}
