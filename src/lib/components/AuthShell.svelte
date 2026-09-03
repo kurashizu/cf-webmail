@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import BackgroundVideo from '$lib/components/BackgroundVideo.svelte';
+	import BuildInfo from '$lib/components/BuildInfo.svelte';
 	let { children, title, subtitle, footer }: {
 		children: Snippet;
 		title: string;
@@ -33,6 +34,7 @@
 			{:else}
 				<p>Hosted on Cloudflare · powered by Email Service</p>
 			{/if}
+			<BuildInfo />
 		</footer>
 	</main>
 </div>
@@ -124,6 +126,10 @@
 	}
 
 	footer {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: var(--space-2);
 		font-size: 12px;
 		color: var(--text-muted);
 		text-align: center;

@@ -3,6 +3,7 @@
 	import { t } from '$lib/i18n';
 	import LanguagePicker from '$lib/components/LanguagePicker.svelte';
 	import BackgroundVideo from '$lib/components/BackgroundVideo.svelte';
+	import BuildInfo from '$lib/components/BuildInfo.svelte';
 
 	let { data }: { data: PageData } = $props();
 	const tt = (key: string, params?: Record<string, string | number>) =>
@@ -80,7 +81,10 @@
 
 	<footer>
 		<span>{tt('landing.footerCopyright', { brand: tt('common.brandName') })}</span>
-		<span><a href="/api-docs">API</a> · krsz.in</span>
+		<span class="footer-right">
+			<a href="/api-docs">API</a> · krsz.in
+			<BuildInfo />
+		</span>
 	</footer>
 </main>
 
@@ -128,6 +132,7 @@
 	.principles h2 { margin: 12px 0 7px; font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
 	.principles p { margin: 0; color: var(--text-muted); font-size: 13px; line-height: 1.6; }
 	footer { width: min(1120px, calc(100% - 48px)); margin: 0 auto; padding: 23px 0 28px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: var(--space-4); color: var(--text-muted); font-size: 11px; flex-wrap: wrap; }
+	.footer-right { display: inline-flex; align-items: center; gap: var(--space-3); }
 	@media (max-width: 680px) {
 		nav { height: 72px; }
 		.hero { width: min(100% - 32px, 560px); padding: 78px 0 90px; }
