@@ -53,6 +53,20 @@ export const actions: Actions = {
 
 		const disabled = await platform.env.SESSIONS.get(`disabled:${account.id}`);
 		if (disabled === '1') {
+			// A pending registration is gated through the same `disabled:` flag as
+			// an admin-disabled account (see register/+page.server.ts and
+			// api/admin/users/+server.ts's approve/reject actions), but the two
+			// mean very different things to the person trying to sign in — one is
+			// "wait, this is normal," the other is "something is wrong, ask an
+			// admin." Distinguish them via registration_status rather than
+			// showing every locked-out account the same alarming message.
+			if (account.registration_status === 'pending') {
+				auditFail('pending_review');
+				return fail(403, {
+					error: 'Your registration is still being reviewed. This is usually quick — please try signing in again in a little while.',
+					email
+				});
+			}
 			auditFail('disabled');
 			return fail(403, { error: 'This account has been disabled. Contact the administrator.', email });
 		}
