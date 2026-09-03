@@ -30,6 +30,14 @@
 {/if}
 {@render children?.()}
 
+<a
+	class="build-info"
+	href="https://github.com/kurashizu/cf-webmail/commit/{__BUILD_COMMIT__}"
+	target="_blank"
+	rel="noopener noreferrer"
+	title="Build {__BUILD_COMMIT__} — {__BUILD_TIME__}"
+>{__BUILD_COMMIT__} · {new Date(__BUILD_TIME__).toISOString().slice(0, 16).replace('T', ' ')}</a>
+
 <style>
 	.navigation-progress {
 		position: fixed;
@@ -56,5 +64,30 @@
 	}
 	@media (prefers-reduced-motion: reduce) {
 		.navigation-progress span { width: 100%; animation: none; }
+	}
+
+	.build-info {
+		position: fixed;
+		right: 8px;
+		bottom: 6px;
+		z-index: 10;
+		padding: 2px 6px;
+		border-radius: var(--radius-sm);
+		font-family: var(--font-mono);
+		font-size: 9px;
+		letter-spacing: 0.02em;
+		color: var(--text-muted);
+		opacity: 0.35;
+		text-decoration: none;
+		pointer-events: auto;
+		transition: opacity var(--transition-fast);
+	}
+	.build-info:hover,
+	.build-info:focus-visible {
+		opacity: 1;
+		color: var(--text-secondary);
+	}
+	@media (max-width: 680px) {
+		.build-info { display: none; }
 	}
 </style>

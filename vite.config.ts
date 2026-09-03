@@ -1,6 +1,20 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig, type Plugin } from 'vite';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { execSync } from 'node:child_process';
+
+function gitOutput(cmd: string): string {
+	try {
+		return execSync(cmd, { encoding: 'utf-8' }).trim();
+	} catch {
+		return '';
+	}
+}
+
+// Baked in at build time (not read at request time) — a footer credit, not
+// a live status check, so it costs nothing on the request path.
+const BUILD_COMMIT = gitOutput('git rev-parse --short HEAD') || 'unknown';
+const BUILD_TIME = new Date().toISOString();
 
 /**
  * Vite plugin: append the email handler into the adapter-generated worker.
@@ -109,5 +123,9 @@ function injectEmailHandler(): Plugin {
 }
 
 export default defineConfig({
-	plugins: [sveltekit(), injectEmailHandler()]
+	plugins: [sveltekit(), injectEmailHandler()],
+	define: {
+		__BUILD_COMMIT__: JSON.stringify(BUILD_COMMIT),
+		__BUILD_TIME__: JSON.stringify(BUILD_TIME)
+	}
 });
