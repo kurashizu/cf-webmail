@@ -7,7 +7,7 @@ import {
 	negotiateLocale
 } from '$lib/i18n/locale';
 
-const PUBLIC_PATHS = ['/', '/login', '/register', '/api/health'];
+const PUBLIC_PATHS = ['/', '/login', '/register', '/terms', '/api/health'];
 
 export const handle: Handle = async ({ event, resolve }) => {
 	event.locals.user = null;

@@ -55,7 +55,7 @@
 
 		<button type="submit" class="btn btn-primary submit">{tt('auth.signInCta')}</button>
 
-		<p class="hint">{tt('auth.signInHint')}</p>
+		<p class="hint">{tt('auth.signInHint')} <a href="/register">{tt('auth.createMailboxCta')}</a></p>
 	</form>
 </AuthShell>
 
@@ -80,6 +80,7 @@
 			font-size: 13px;
 		}
 	.hint { text-align: center; font-size: 13px; color: var(--text-secondary); margin: 0; }
+	.hint a { color: var(--accent); }
 	.footer-row {
 		display: flex;
 		align-items: center;

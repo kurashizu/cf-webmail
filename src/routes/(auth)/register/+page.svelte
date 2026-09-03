@@ -185,6 +185,11 @@
 				{tt('auth.createMailboxCta')}
 			</button>
 
+			<p class="terms-hint">
+				{tt('auth.termsHint', { cta: tt('auth.createMailboxCta') })}
+				<a href="/terms" target="_blank" rel="noopener noreferrer">{tt('auth.termsLink')}</a>.
+			</p>
+
 			<p class="hint">
 				{tt('auth.alreadyHaveAccount')} <a href="/login">{tt('common.signIn')}</a>
 			</p>
@@ -239,6 +244,8 @@
 		}
 	.hint { text-align: center; font-size: 13px; color: var(--text-secondary); margin: 0; }
 	.hint a { color: var(--accent); }
+	.terms-hint { text-align: center; font-size: 11px; line-height: 1.5; color: var(--text-secondary); margin: 0; }
+	.terms-hint a { color: var(--accent); }
 	.footer-row {
 		display: flex;
 		align-items: center;
