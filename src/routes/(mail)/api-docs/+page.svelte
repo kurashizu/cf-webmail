@@ -432,22 +432,16 @@
 
 	.tabs {
 		display: flex;
-		flex-wrap: nowrap;
+		flex-wrap: wrap;
 		gap: 4px;
 		padding: 4px;
 		margin-bottom: var(--space-5);
 		border: 1px solid var(--border);
 		border-radius: var(--radius-lg);
 		background: var(--bg-card);
-		overflow-x: auto;
-		scrollbar-width: none;
-	}
-	.tabs::-webkit-scrollbar {
-		display: none;
 	}
 	.tab {
-		flex: 1;
-		min-width: max-content;
+		flex: none;
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
