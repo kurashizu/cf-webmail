@@ -632,7 +632,7 @@
 		border: 0;
 		background: transparent;
 		border-radius: var(--radius-sm);
-		color: var(--text-muted);
+		color: var(--text-secondary);
 		cursor: pointer;
 		font-size: 14px;
 	}
@@ -653,6 +653,11 @@
 	@media (max-width: 720px) {
 		.row-actions {
 			opacity: 1;
+			gap: 8px;
+		}
+		.icon-button {
+			width: 36px;
+			height: 36px;
 		}
 	}
 </style>

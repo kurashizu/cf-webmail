@@ -458,7 +458,7 @@
 										: tt('admin.users.lastMailNever')}</td
 								>
 								<td>
-									<span class="badge" class:off={user.disabled}
+									<span class="badge" class:off={user.disabled} class:active={!user.disabled}
 										>{user.disabled
 											? tt('admin.users.statusDisabled')
 											: tt('admin.users.statusActive')}</span
@@ -582,7 +582,7 @@
 						<strong>{selected.display_name || selected.local_part}</strong>
 						<span>Created {new Date(selected.created_at).toLocaleString()}</span>
 					</div>
-					<span class="badge" class:off={selected.disabled}
+					<span class="badge" class:off={selected.disabled} class:active={!selected.disabled}
 						>{selected.disabled ? 'Disabled' : 'Active'}</span
 					>
 				</div>
@@ -988,9 +988,16 @@
 	}
 	.table-wrap {
 		overflow-x: auto;
+		/* Scroll-edge cue: an inset shadow on either side hints there's more
+		 * table off-screen instead of the content just looking cut off at
+		 * the card boundary. */
+		box-shadow:
+			inset 10px 0 8px -8px rgba(0, 0, 0, 0.35),
+			inset -10px 0 8px -8px rgba(0, 0, 0, 0.35);
 	}
 	table {
 		width: 100%;
+		min-width: 640px;
 		border-collapse: collapse;
 		font-size: 12px;
 	}
@@ -1015,7 +1022,7 @@
 		display: block;
 	}
 	td small {
-		color: var(--text-muted);
+		color: var(--text-secondary);
 	}
 	tr.disabled {
 		opacity: 0.62;
@@ -1025,13 +1032,15 @@
 		display: inline-block !important;
 		width: max-content;
 		padding: 3px 8px;
-		border-radius: 99px;
-		background: var(--color-success-bg);
-		color: var(--color-success);
+		border-radius: var(--radius-full);
 		font-size: 9px;
 		font-weight: 700;
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
+	}
+	.badge.active {
+		background: var(--color-success-bg);
+		color: var(--color-success);
 	}
 	.badge.role {
 		background: var(--accent-subtle);
@@ -1111,6 +1120,7 @@
 		display: grid;
 		gap: 15px;
 		padding: 18px;
+		padding-bottom: max(18px, env(safe-area-inset-bottom));
 	}
 
 	.identity {
@@ -1124,7 +1134,7 @@
 		height: 46px;
 		display: grid;
 		place-items: center;
-		border-radius: 13px;
+		border-radius: var(--radius-md);
 		background: var(--accent-subtle);
 		color: var(--accent);
 		font-weight: 700;
@@ -1135,7 +1145,7 @@
 	}
 	.identity > div span {
 		margin-top: 3px;
-		color: var(--text-muted);
+		color: var(--text-secondary);
 		font-size: 10px;
 	}
 
@@ -1145,7 +1155,7 @@
 		gap: 1px;
 		overflow: hidden;
 		border: 1px solid var(--border);
-		border-radius: 10px;
+		border-radius: var(--radius-md);
 		background: var(--border);
 	}
 	.metrics div {
@@ -1163,7 +1173,7 @@
 		gap: var(--space-3);
 		padding: var(--space-4);
 		border: 1px solid var(--border);
-		border-radius: 12px;
+		border-radius: var(--radius-md);
 		background: var(--bg-card);
 	}
 	.panel h3 {
@@ -1189,7 +1199,7 @@
 	.modal p,
 	.modal small {
 		margin: 0;
-		color: var(--text-muted);
+		color: var(--text-secondary);
 		font-size: 11px;
 		line-height: 1.55;
 	}
@@ -1214,7 +1224,7 @@
 	}
 	.action-row span {
 		margin-top: 3px;
-		color: var(--text-muted);
+		color: var(--text-secondary);
 		font-size: 10px;
 	}
 	.danger-zone {
@@ -1222,9 +1232,9 @@
 	}
 	.self-note {
 		padding: 13px;
-		border-radius: 10px;
+		border-radius: var(--radius-md);
 		background: var(--accent-subtle);
-		color: var(--text-muted);
+		color: var(--text-secondary);
 		font-size: 11px;
 	}
 
@@ -1258,6 +1268,7 @@
 		gap: var(--space-2);
 		margin-top: 20px;
 		padding: 14px 20px;
+		padding-bottom: max(14px, env(safe-area-inset-bottom));
 		border-top: 1px solid var(--border);
 	}
 	.address {

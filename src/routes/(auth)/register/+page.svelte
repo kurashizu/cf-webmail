@@ -99,7 +99,7 @@
 		text-transform: uppercase;
 	}
 	.field input { width: 100%; padding: var(--space-3) var(--space-4); font-size: 14px; }
-	.field small { font-size: 11px; color: var(--text-muted); line-height: 1.5; }
+	.field small { font-size: 11px; color: var(--text-secondary); line-height: 1.5; }
 	.addr {
 		display: flex;
 		align-items: stretch;
@@ -118,7 +118,7 @@
 		place-items: center;
 		padding: 0 var(--space-3);
 		background: var(--bg-elevated);
-		color: var(--text-muted);
+		color: var(--text-secondary);
 		font-size: 13px;
 	}
 	.submit { justify-content: center; padding: var(--space-3); font-weight: 600; margin-top: var(--space-2); }
@@ -130,7 +130,7 @@
 			color: var(--color-danger);
 			font-size: 13px;
 		}
-	.hint { text-align: center; font-size: 13px; color: var(--text-muted); margin: 0; }
+	.hint { text-align: center; font-size: 13px; color: var(--text-secondary); margin: 0; }
 	.hint a { color: var(--accent); }
 	.footer-row {
 		display: flex;
@@ -142,6 +142,6 @@
 	}
 	.footer-text {
 		font-size: 11px;
-		color: var(--text-muted);
+		color: var(--text-secondary);
 	}
 </style>

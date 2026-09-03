@@ -16,7 +16,7 @@
 
 	<header>
 		<a href="/" class="brand">
-			<img class="logo-mark" src="/brand-mark.svg" alt="" width="32" height="32" />
+			<img class="logo-mark" src="/brand-mark.svg" alt="" width="40" height="40" />
 			<span class="brand-name font-serif">KRSZ Mail</span>
 		</a>
 	</header>
@@ -78,8 +78,8 @@
 	}
 
 	.logo-mark {
-		width: 32px;
-		height: 32px;
+		width: 40px;
+		height: 40px;
 		border-radius: var(--radius-sm);
 		object-fit: cover;
 		border: 1px solid var(--accent-ring);
@@ -109,6 +109,14 @@
 		max-width: 420px;
 		padding: var(--space-8);
 	}
+	/* This card is a static form, not a clickable list item — undo the
+	 * global .card:hover lift/shadow-grow so hovering the form doesn't read
+	 * as an accidental button/link affordance. */
+	.card:hover {
+		border-color: var(--border);
+		box-shadow: var(--shadow-card);
+		transform: none;
+	}
 
 	.card h1 {
 		margin: 0 0 var(--space-2);
@@ -131,7 +139,7 @@
 		align-items: center;
 		gap: var(--space-2);
 		font-size: 12px;
-		color: var(--text-muted);
+		color: var(--text-secondary);
 		text-align: center;
 	}
 </style>

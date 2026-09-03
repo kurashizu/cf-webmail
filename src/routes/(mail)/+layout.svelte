@@ -174,7 +174,7 @@
 	<Toast />
 	<header class="topbar" class:scrolled={scrolled}>
 		<a href="/inbox" class="brand" aria-label={tt('landing.signInAria', { brand: tt('common.brandName') })}>
-			<img class="logo-mark" src="/brand-mark.svg" alt="" width="32" height="32" />
+			<img class="logo-mark" src="/brand-mark.svg" alt="" width="40" height="40" />
 			<span class="brand-name font-serif">{tt('common.brandName')}</span>
 		</a>
 		<form class="top-search" action="/search" method="GET" role="search">
@@ -296,6 +296,9 @@
 				{/each}
 			</nav>
 			<div class="sheet-divider"></div>
+			<div class="sheet-language">
+				<LanguagePicker locale={data.locale as Locale} />
+			</div>
 			<nav class="sheet-secondary">
 				<a class="folder" href="/settings" onclick={closeMobileMenu}>
 					<span class="folder-main">
@@ -347,12 +350,17 @@
 		--mail-bg-secondary: var(--bg-secondary);
 		--mail-bg-card: var(--bg-card);
 		--mail-bg-elevated: var(--bg-elevated);
+		--mail-border: var(--border);
 	}
 	:global(.app) {
 		--bg-primary: color-mix(in srgb, var(--mail-bg-primary) 55%, transparent);
 		--bg-secondary: color-mix(in srgb, var(--mail-bg-secondary) 55%, transparent);
 		--bg-card: color-mix(in srgb, var(--mail-bg-card) 60%, transparent);
 		--bg-elevated: color-mix(in srgb, var(--mail-bg-elevated) 60%, transparent);
+		/* Kept much more opaque than the fills: a hairline divider that fades
+		 * in and out with whatever the background video happens to be
+		 * showing is illegible, not atmospheric. */
+		--border: color-mix(in srgb, var(--mail-border) 92%, transparent);
 	}
 
 	:global(.app .bg-video) {
@@ -387,8 +395,8 @@
 	}
 
 	.logo-mark {
-		width: 32px;
-		height: 32px;
+		width: 40px;
+		height: 40px;
 		border-radius: var(--radius-sm);
 		object-fit: cover;
 		border: 1px solid var(--accent-ring);
@@ -690,6 +698,10 @@
 			display: none;
 		}
 
+		.me :global(.picker) {
+			display: none;
+		}
+
 		.compose-btn span {
 			display: none;
 		}
@@ -873,6 +885,15 @@
 			margin: 4px 0;
 			background: var(--border);
 		}
+		.sheet-language {
+			padding: 8px 12px;
+		}
+		.sheet-language :global(.picker) {
+			width: 100%;
+			min-height: 44px;
+			justify-content: center;
+			font-size: 13px;
+		}
 		.sheet .folder {
 			min-height: 44px;
 			padding: 10px 12px;
@@ -927,8 +948,8 @@
 
 	@media (max-width: 420px) {
 		.logo-mark {
-			width: 28px;
-			height: 28px;
+			width: 34px;
+			height: 34px;
 		}
 	}
 </style>

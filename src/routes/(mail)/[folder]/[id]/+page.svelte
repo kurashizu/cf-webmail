@@ -157,7 +157,7 @@
 			const response = await fetch(`/api/messages/${data.message.id}/star`, { method: 'POST' });
 			if (!response.ok) throw new Error();
 			const result = (await response.json()) as { flags: string[] };
-			starred = result.flags.includes('\Flagged');
+			starred = result.flags.includes('\\Flagged');
 			await invalidateAll();
 			toastStore.success(starred ? tt('toast.message.starred') : tt('toast.message.unstarred'));
 		} catch {

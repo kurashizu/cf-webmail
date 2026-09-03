@@ -246,7 +246,7 @@ function formatMB(bytes: number) {
 	.field.inline input { min-width: 0; padding: 13px 0; border: 0; background: transparent; border-radius: 0; }
 	.field.inline input:focus { border: 0; }
 	.field.inline input:disabled { color: var(--text-muted); }
-	.subject input { font-weight: 550; }
+	.subject input { font-weight: 600; }
 	.message-field { display: block; padding: var(--space-4) var(--space-5); }
 	.message-field textarea { width: 100%; min-height: 300px; padding: 0; border: 0; resize: vertical; background: transparent; line-height: 1.7; }
 	.message-field textarea:focus { border: 0; }
@@ -263,7 +263,7 @@ function formatMB(bytes: number) {
 	.file-icon { width: 30px; height: 30px; display: grid; place-items: center; border-radius: var(--radius-sm); background: var(--accent-subtle); color: var(--accent); }
 	.file-icon svg { width: 16px; }
 	.attachments li > div:nth-child(2) { min-width: 0; display: grid; }
-	.attachments strong { overflow: hidden; font-size: 12px; font-weight: 550; text-overflow: ellipsis; white-space: nowrap; }
+	.attachments strong { overflow: hidden; font-size: 12px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 	.attachments span { color: var(--text-muted); font-size: 10px; }
 	.attachments button { width: 28px; height: 28px; border-radius: 50%; color: var(--text-muted); font-size: 18px; }
 	.attachments button:hover { background: var(--color-danger-subtle); color: var(--color-danger); }

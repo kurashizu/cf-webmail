@@ -223,7 +223,7 @@ select:focus {
 }
 .subtitle {
 	margin: 6px 0 0;
-	color: var(--text-muted);
+	color: var(--text-secondary);
 	font-size: 13px;
 }
 .head-actions {
@@ -232,7 +232,7 @@ select:focus {
 	gap: var(--space-3);
 }
 .count {
-	color: var(--text-muted);
+	color: var(--text-secondary);
 	font-size: 12px;
 }
 .action-error {
@@ -319,7 +319,7 @@ select:focus {
 	display: flex;
 	align-items: center;
 	gap: var(--space-2);
-	color: var(--text-muted);
+	color: var(--text-secondary);
 	font-size: 11px;
 	cursor: pointer;
 }
@@ -522,7 +522,7 @@ select:focus {
 	min-width: 0;
 }
 .time {
-	color: var(--text-muted);
+	color: var(--text-secondary);
 	font-size: 11px;
 	font-family: var(--font-mono);
 	flex: none;
@@ -538,7 +538,7 @@ select:focus {
 .preview {
 	margin-top: 2px;
 	font-size: 12px;
-	color: var(--text-muted);
+	color: var(--text-secondary);
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;

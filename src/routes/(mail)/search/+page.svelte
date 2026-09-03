@@ -116,7 +116,7 @@
 	.page-head { margin-bottom: var(--space-4); }
 	.eyebrow { margin: 0 0 4px; color: var(--accent); font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
 	.page-head h1 { margin: 0; font-size: clamp(25px, 3vw, 34px); font-weight: 600; letter-spacing: -.025em; }
-	.summary { margin: 5px 0 0; color: var(--text-muted); font-size: 12px; }
+	.summary { margin: 5px 0 0; color: var(--text-secondary); font-size: 12px; }
 	.page-search { margin-bottom: var(--space-5); padding: 5px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg-card); }
 	.search-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 7px; }
 	.query-field { display: flex; align-items: center; gap: 10px; min-width: 0; padding-left: 9px; }
@@ -129,18 +129,18 @@
 	.filter-toggle span { min-width: 17px; padding: 1px 5px; border-radius: var(--radius-full); background: var(--accent); color: var(--bg-primary); font-size: 9px; text-align: center; }
 	.filters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 11px; margin-top: 5px; padding: 14px 9px 9px; border-top: 1px solid var(--border); }
 	.filters > label { display: grid; gap: 5px; }
-	.filters > label > span { color: var(--text-muted); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
+	.filters > label > span { color: var(--text-secondary); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
 	.filters select, .filters input[type="date"] { width: 100%; min-width: 0; height: 36px; padding: 6px 9px; font-size: 12px; }
-	.checks { grid-column: 1 / -2; display: flex; align-items: center; gap: var(--space-5); }
+	.checks { grid-column: 1 / -1; display: flex; align-items: center; gap: var(--space-5); }
 	.checks label { display: inline-flex; align-items: center; gap: 7px; color: var(--text-secondary); font-size: 12px; }
 	.checks input { width: 15px; height: 15px; margin: 0; accent-color: var(--accent); }
-	.reset { align-self: center; justify-self: end; color: var(--text-muted); font-size: 11px; }
+	.reset { grid-column: 1 / -1; justify-self: end; color: var(--text-secondary); font-size: 11px; }
 	.reset:hover { color: var(--accent); }
 	.empty { min-height: 340px; display: grid; place-content: center; justify-items: center; padding: var(--space-8); text-align: center; border: 1px dashed var(--border); border-radius: var(--radius-lg); color: var(--text-secondary); }
 	.empty-icon { width: 48px; height: 48px; display: grid; place-items: center; margin-bottom: var(--space-4); border-radius: 50%; background: var(--accent-subtle); color: var(--accent); }
 	.empty-icon svg { width: 22px; height: 22px; }
 	.empty h2 { margin: 0 0 6px; color: var(--text-primary); font-size: 18px; }
-	.empty p { margin: 0; color: var(--text-muted); font-size: 13px; }
+	.empty p { margin: 0; color: var(--text-secondary); font-size: 13px; }
 	.list { list-style: none; margin: 0; padding: 0; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg-secondary); }
 	.msg { border-bottom: 1px solid var(--border); }
 	.msg:last-child { border-bottom: 0; }
@@ -153,10 +153,10 @@
 	.line { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); }
 	.from, .subject, .preview { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 	.from { color: var(--text-secondary); font-size: 14px; }
-	.unread .from, .unread .subject { color: var(--text-primary); font-weight: 650; }
-	.time { flex: none; color: var(--text-muted); font-size: 11px; }
+	.unread .from, .unread .subject { color: var(--text-primary); font-weight: 700; }
+	.time { flex: none; color: var(--text-secondary); font-size: 11px; }
 	.subject { margin-top: 2px; color: var(--text-primary); font-size: 14px; }
-	.preview { margin-top: 2px; color: var(--text-muted); font-size: 12px; }
+	.preview { margin-top: 2px; color: var(--text-secondary); font-size: 12px; }
 	.indicators { display: flex; align-items: center; gap: 8px; color: var(--text-muted); }
 	.indicators svg { width: 15px; height: 15px; }
 	.folder-tag { padding: 3px 7px; border: 1px solid var(--border); border-radius: var(--radius-full); font-size: 9px; letter-spacing: .05em; text-transform: uppercase; }

@@ -417,8 +417,7 @@
 		border-top: 1px solid var(--border);
 		background: var(--bg-primary);
 		color: var(--text-secondary);
-		font-family:
-			'SF Mono', Monaco, Menlo, Consolas, 'Liberation Mono', monospace;
+		font-family: var(--font-mono);
 		font-size: 11px;
 		line-height: 1.65;
 		overflow-x: auto;
@@ -534,9 +533,8 @@
 	.verb {
 		display: inline-block;
 		padding: 3px 8px;
-		border-radius: 6px;
-		font-family:
-			'SF Mono', Monaco, Menlo, Consolas, monospace;
+		border-radius: var(--radius-md);
+		font-family: var(--font-mono);
 		font-size: 10px;
 		font-weight: 700;
 		letter-spacing: 0.06em;
@@ -694,10 +692,9 @@
 	.enum-values li {
 		padding: 1px 6px;
 		border: 1px solid var(--border);
-		border-radius: 999px;
+		border-radius: var(--radius-full);
 		color: var(--text-secondary);
-		font-family:
-			'SF Mono', Monaco, Menlo, Consolas, monospace;
+		font-family: var(--font-mono);
 		font-size: 10px;
 	}
 	.field-desc {

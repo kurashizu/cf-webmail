@@ -36,7 +36,7 @@
 	<header>
 		<nav aria-label={tt('nav.primary')}>
 			<a href="/" class="brand" aria-label={tt('landing.signInAria', { brand: tt('common.brandName') })}>
-				<img class="brand-mark" src="/brand-mark.svg" alt="" width="31" height="31" />
+				<img class="brand-mark" src="/brand-mark.svg" alt="" width="40" height="40" />
 				<span class="brand-name">{tt('common.brandName')}</span>
 			</a>
 			<div class="nav-actions">
@@ -97,19 +97,19 @@
 	nav { width: min(1120px, 100%); height: 88px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
 	.brand { display: inline-flex; align-items: center; gap: 11px; color: var(--text-primary); }
 	.brand:hover { color: var(--text-primary); }
-	.brand-mark { width: 31px; height: 31px; border-radius: var(--radius-sm); object-fit: cover; border: 1px solid var(--accent-ring); }
-	.brand-name { font-size: 15px; font-weight: 650; letter-spacing: -.01em; }
+	.brand-mark { width: 40px; height: 40px; border-radius: var(--radius-sm); object-fit: cover; border: 1px solid var(--accent-ring); }
+	.brand-name { font-size: 15px; font-weight: 700; letter-spacing: -.01em; }
 	.nav-actions { display: flex; align-items: center; gap: var(--space-3); }
-	.sign-in { padding: 9px 15px; border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-secondary); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+	.sign-in { display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px; border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-secondary); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 	.sign-in:hover { border-color: var(--accent); background: var(--accent-subtle); color: var(--accent); }
 	.hero { width: min(820px, calc(100% - 48px)); margin: auto; padding: 96px 0 112px; text-align: center; }
-	.eyebrow { margin-bottom: 25px; color: var(--accent); font-family: var(--font-mono); font-size: 11px; font-weight: 650; letter-spacing: .16em; text-transform: uppercase; }
+	.eyebrow { margin-bottom: 25px; color: var(--accent); font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
 	.slogan {
 		margin: 0;
 		font-size: clamp(48px, 7.4vw, 84px);
 		line-height: 1.02;
 		letter-spacing: -.045em;
-		font-weight: 650;
+		font-weight: 700;
 	}
 	.accent-letter {
 		color: var(--accent);
@@ -118,7 +118,7 @@
 		letter-spacing: -.02em;
 	}
 	.lead { max-width: 560px; margin: 30px auto 0; color: var(--text-secondary); font-size: 17px; line-height: 1.65; }
-	.address { color: var(--text-primary); font-weight: 550; }
+	.address { color: var(--text-primary); font-weight: 600; }
 	.actions { margin-top: 37px; display: flex; align-items: center; justify-content: center; gap: 12px; }
 	.primary-action { min-height: 46px; padding: 0 20px; border-radius: var(--radius-sm); display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 	
@@ -130,8 +130,8 @@
 	.principles > div:hover { transform: translateY(-2px); }
 	.principle-number { color: var(--accent); font-family: var(--font-mono); font-size: 10px; }
 	.principles h2 { margin: 12px 0 7px; font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
-	.principles p { margin: 0; color: var(--text-muted); font-size: 13px; line-height: 1.6; }
-	footer { width: min(1120px, calc(100% - 48px)); margin: 0 auto; padding: 23px 0 28px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: var(--space-4); color: var(--text-muted); font-size: 11px; flex-wrap: wrap; }
+	.principles p { margin: 0; color: var(--text-secondary); font-size: 13px; line-height: 1.6; }
+	footer { width: min(1120px, calc(100% - 48px)); margin: 0 auto; padding: 23px 0 28px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: var(--space-4); color: var(--text-secondary); font-size: 11px; flex-wrap: wrap; }
 	.footer-right { display: inline-flex; align-items: center; gap: var(--space-3); }
 	@media (max-width: 680px) {
 		nav { height: 72px; }

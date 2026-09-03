@@ -68,7 +68,8 @@
 		pointer-events: none;
 	}
 	.picker.compact {
-		padding: 4px 22px 4px 8px;
+		min-height: 36px;
+		padding: 8px 24px 8px 10px;
 		font-size: 10px;
 	}
 	.full {

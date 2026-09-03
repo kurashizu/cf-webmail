@@ -79,7 +79,7 @@
 			color: var(--color-danger);
 			font-size: 13px;
 		}
-	.hint { text-align: center; font-size: 13px; color: var(--text-muted); margin: 0; }
+	.hint { text-align: center; font-size: 13px; color: var(--text-secondary); margin: 0; }
 	.footer-row {
 		display: flex;
 		align-items: center;
@@ -90,6 +90,6 @@
 	}
 	.footer-text {
 		font-size: 11px;
-		color: var(--text-muted);
+		color: var(--text-secondary);
 	}
 </style>

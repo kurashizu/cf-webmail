@@ -236,12 +236,46 @@
 			</label>
 			{#if selected.size}
 				<div class="bulk-actions">
-					<button data-action="mark-read" disabled={bulkBusy} onclick={() => bulkAction('read')}>{tt('inbox.bulkRead')}</button>
-					<button data-action="mark-unread" disabled={bulkBusy} onclick={() => bulkAction('unread')}>{tt('inbox.bulkUnread')}</button>
-					<button disabled={bulkBusy} onclick={() => bulkAction('star')}>☆ {tt('inbox.bulkStar')}</button>
-					<button disabled={bulkBusy} onclick={() => bulkAction('unstar')}>★ {tt('inbox.bulkUnstar')}</button>
-					<button class="danger" disabled={bulkBusy} onclick={() => bulkAction('move', data.folder === 'Trash' ? 'INBOX' : 'Trash')}>
-						{data.folder === 'Trash' ? tt('folder.moveToInbox') : tt('folder.moveToTrash')}
+					<button data-action="mark-read" disabled={bulkBusy} onclick={() => bulkAction('read')} title={tt('inbox.markAsRead')}>
+						<svg viewBox="0 0 24 24" fill="none"
+							><path
+								d="M3 6h18v12H3V6Zm0 1 9 7 9-7"
+								stroke="currentColor"
+								stroke-width="1.7"
+								stroke-linejoin="round"
+							/></svg
+						>
+						<span>{tt('inbox.bulkRead')}</span>
+					</button>
+					<button data-action="mark-unread" disabled={bulkBusy} onclick={() => bulkAction('unread')} title={tt('message.markUnread')}>
+						<svg viewBox="0 0 24 24" fill="none"
+							><path
+								d="M3 7h18v11H3V7Zm0 0 9 6 9-6"
+								stroke="currentColor"
+								stroke-width="1.7"
+							/></svg
+						>
+						<span>{tt('inbox.bulkUnread')}</span>
+					</button>
+					<button data-action="star" disabled={bulkBusy} onclick={() => bulkAction('star')} title={tt('inbox.addStar')}>☆<span>{tt('inbox.bulkStar')}</span></button>
+					<button data-action="unstar" disabled={bulkBusy} onclick={() => bulkAction('unstar')} title={tt('inbox.removeStar')}>★<span>{tt('inbox.bulkUnstar')}</span></button>
+					<button
+						class="trash"
+						data-action="trash"
+						disabled={bulkBusy}
+						onclick={() => bulkAction('move', data.folder === 'Trash' ? 'INBOX' : 'Trash')}
+						title={data.folder === 'Trash' ? tt('folder.moveToInbox') : tt('folder.moveToTrash')}
+					>
+						<svg viewBox="0 0 24 24" fill="none"
+							><path
+								d="M4 7h16M9 11v6m6-6v6M6 7l1 14h10l1-14M9 7l1-4h4l1-4"
+								stroke="currentColor"
+								stroke-width="1.7"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							/></svg
+						>
+						<span>{data.folder === 'Trash' ? tt('folder.moveToInbox') : tt('folder.moveToTrash')}</span>
 					</button>
 				</div>
 			{/if}

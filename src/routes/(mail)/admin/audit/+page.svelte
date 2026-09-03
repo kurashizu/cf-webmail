@@ -127,7 +127,7 @@
 							<td class="target">{entry.target_email || '—'}</td>
 							<td class="detail">
 								{#if entry.detail}
-									<code>{JSON.stringify(entry.detail)}</code>
+									<code title={JSON.stringify(entry.detail)}>{JSON.stringify(entry.detail)}</code>
 								{:else}
 									—
 								{/if}
@@ -173,14 +173,14 @@
 	}
 	.page-head h1 {
 		margin: 0;
-		font-size: clamp(24px, 3vw, 30px);
+		font-size: clamp(25px, 3vw, 34px);
 		font-weight: 600;
 		letter-spacing: -0.02em;
 	}
 	.subtitle {
 		max-width: 620px;
 		margin: 6px 0 0;
-		color: var(--text-muted);
+		color: var(--text-secondary);
 		font-size: 13px;
 		line-height: 1.6;
 	}
@@ -199,7 +199,10 @@
 		gap: 6px;
 	}
 	.filter-chip {
-		padding: 6px 12px;
+		display: inline-flex;
+		align-items: center;
+		min-height: 36px;
+		padding: 0 14px;
 		border: 1px solid var(--border);
 		border-radius: var(--radius-full);
 		background: var(--bg-card);
@@ -218,7 +221,7 @@
 		color: var(--accent);
 	}
 	.total {
-		color: var(--text-muted);
+		color: var(--text-secondary);
 		font-size: 12px;
 		white-space: nowrap;
 	}
@@ -235,7 +238,7 @@
 	.empty {
 		padding: var(--space-8) 0;
 		text-align: center;
-		color: var(--text-muted);
+		color: var(--text-secondary);
 		font-size: 13px;
 	}
 
@@ -254,8 +257,8 @@
 	th {
 		padding: 10px 14px;
 		text-align: left;
-		color: var(--text-muted);
-		font-size: 10px;
+		color: var(--text-secondary);
+		font-size: 9px;
 		font-weight: 700;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
@@ -276,7 +279,7 @@
 	}
 	.when {
 		white-space: nowrap;
-		color: var(--text-muted);
+		color: var(--text-secondary);
 		font-family: var(--font-mono);
 		font-size: 11px;
 	}
@@ -293,35 +296,38 @@
 		white-space: nowrap;
 		font-family: var(--font-mono);
 		font-size: 11px;
-		color: var(--text-muted);
+		color: var(--text-secondary);
 	}
 	.ip {
 		white-space: nowrap;
 		font-family: var(--font-mono);
 		font-size: 11px;
-		color: var(--text-muted);
+		color: var(--text-secondary);
 	}
 
 	.tag {
 		display: inline-block;
-		padding: 2px 8px;
+		width: max-content;
+		padding: 3px 8px;
 		border-radius: var(--radius-full);
-		border: 1px solid var(--border);
+		background: var(--bg-elevated);
 		color: var(--text-secondary);
-		font-size: 11px;
+		font-size: 9px;
+		font-weight: 700;
 		white-space: nowrap;
-		text-transform: capitalize;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
 	}
 	.tag.admin {
-		border-color: var(--color-warning-border);
+		background: var(--color-warning-bg);
 		color: var(--color-warning-fg);
 	}
 	.tag.danger {
-		border-color: var(--color-danger-border);
+		background: var(--color-danger-bg);
 		color: var(--color-danger);
 	}
 	.tag.send {
-		border-color: var(--accent-soft);
+		background: var(--accent-subtle);
 		color: var(--accent);
 	}
 
@@ -331,11 +337,12 @@
 		justify-content: center;
 		gap: var(--space-4);
 		padding: var(--space-5) 0;
-		color: var(--text-muted);
+		color: var(--text-secondary);
 		font-size: 12px;
 	}
 	.pager button {
-		padding: 6px 14px;
+		min-height: 36px;
+		padding: 0 16px;
 		border: 1px solid var(--border);
 		border-radius: var(--radius-md);
 		background: var(--bg-card);
