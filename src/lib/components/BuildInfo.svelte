@@ -15,7 +15,7 @@
 <style>
 	.build-info {
 		font-family: var(--font-mono);
-		font-size: 11px;
+		font-size: 9px;
 		letter-spacing: 0.02em;
 		color: var(--text-muted);
 		text-decoration: none;
