@@ -529,8 +529,6 @@
 	.sidebar {
 		border-right: 1px solid var(--border);
 		background: var(--bg-secondary);
-		backdrop-filter: blur(16px);
-		-webkit-backdrop-filter: blur(16px);
 		padding: var(--space-4);
 		display: flex;
 		flex-direction: column;
