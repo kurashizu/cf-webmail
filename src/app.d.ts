@@ -37,6 +37,15 @@ declare global {
 				S3_ACCESS_KEY_ID?: string;
 				S3_SECRET_ACCESS_KEY?: string;
 
+				// Open registration — Turnstile human check + Gemini abuse review.
+				TURNSTILE_SITE_KEY?: string;
+				TURNSTILE_SECRET_KEY?: string;
+				GEMINI_API_KEY?: string;
+				// Optional override for the model reviewRegistration() calls — falls
+				// back to abuse-review.js's DEFAULT_GEMINI_MODEL when unset, so this
+				// can be changed by editing wrangler.jsonc's vars, no code change.
+				GEMINI_MODEL?: string;
+
 				// Secrets
 				JWT_SECRET: string;
 				RESEND_API_KEY: string;

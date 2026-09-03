@@ -64,8 +64,10 @@ export async function createAccount(db, account) {
 			`INSERT INTO accounts (
 				id, local_part, email, display_name,
 				password_hash, password_salt, password_iters,
-				role, storage_backend, created_at, updated_at
-			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+				role, storage_backend, created_at, updated_at,
+				registration_status, registration_via, registration_ip,
+				registration_note, registration_meta
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 		)
 		.bind(
 			account.id,
@@ -78,8 +80,20 @@ export async function createAccount(db, account) {
 			account.role ?? 'user',
 			account.storageBackend ?? 'r2',
 			now,
-			now
+			now,
+			account.registrationStatus ?? 'active',
+			account.registrationVia ?? 'invite',
+			account.registrationIp ?? null,
+			account.registrationNote ?? null,
+			account.registrationMeta ? JSON.stringify(account.registrationMeta) : null
 		)
+		.run();
+}
+
+export async function setRegistrationStatus(db, accountId, status) {
+	await db
+		.prepare('UPDATE accounts SET registration_status = ?, updated_at = ? WHERE id = ?')
+		.bind(status, Date.now(), accountId)
 		.run();
 }
 
@@ -105,6 +119,7 @@ export async function listAccounts(db) {
 			`SELECT a.id, a.local_part, a.email, a.display_name, a.role,
 			        a.created_at, a.updated_at,
 			        a.quota_bytes, a.quota_messages, a.storage_used_bytes, a.storage_backend,
+			        a.registration_status, a.registration_via, a.registration_note,
 			        COUNT(DISTINCT m.id) AS message_count,
 			        COALESCE(SUM(CASE WHEN m.folder = 'INBOX' AND m.flags NOT LIKE '%\\Seen%' THEN 1 ELSE 0 END), 0) AS unread_count,
 			        MAX(m.received_at) AS last_message_at,

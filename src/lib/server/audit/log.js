@@ -66,6 +66,7 @@ export const AUDIT_EVENTS = /** @type {const} */ ([
 	'login_failed',
 	'logout',
 	'register',
+	'register_blocked',
 	'send_outbound',
 	'password_change',
 	'profile_update',
@@ -78,5 +79,7 @@ export const AUDIT_EVENTS = /** @type {const} */ ([
 	'admin.set_storage_backend',
 	'admin.delete_user',
 	'admin.create_invite',
-	'admin.delete_invite'
+	'admin.delete_invite',
+	'admin.approve_registration',
+	'admin.reject_registration'
 ]);

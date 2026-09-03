@@ -5,6 +5,7 @@ import {
 	findAccountById,
 	listAccountStorageKeys,
 	listAccounts,
+	setRegistrationStatus,
 	updateAccountByAdmin,
 	updateAccountPassword
 } from '$lib/server/db/queries';
@@ -70,6 +71,15 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 			break;
 		case 'enable':
 			await env.SESSIONS.delete(`disabled:${body.id}`);
+			// A rejected/pending open-registration account is "disabled" via the
+			// same KV flag as a normal admin-disable — clearing that flag here
+			// must also clear registration_status, or the account would end up
+			// fully able to sign in while still labeled 'rejected'/'pending'
+			// everywhere else in the admin UI (and re-disabling it later would
+			// incorrectly re-trip the "not pending" guard on approve/reject).
+			if (account.registration_status === 'pending' || account.registration_status === 'rejected') {
+				await setRegistrationStatus(env.DB, body.id, 'active');
+			}
 			break;
 		case 'revoke_sessions':
 			if (isSelf) throw error(400, 'Use Sign out to end your current session.');
@@ -146,6 +156,25 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 					auditDetail = { previousBackend: account.storage_backend || 'r2', backend };
 					break;
 				}
+			case 'approve_registration': {
+				if (account.registration_status !== 'pending') throw error(409, 'This account is not pending review.');
+				await setRegistrationStatus(env.DB, body.id, 'active');
+				await env.SESSIONS.delete(`disabled:${body.id}`);
+				auditDetail = { registrationNote: account.registration_note || null };
+				break;
+			}
+			case 'reject_registration': {
+				if (account.registration_status !== 'pending') throw error(409, 'This account is not pending review.');
+				await setRegistrationStatus(env.DB, body.id, 'rejected');
+				// Leave the `disabled:` flag in place — rejected accounts stay
+				// locked out, same as an admin-disabled account, but distinguished
+				// in the UI via registration_status so it's clear this was a
+				// registration-review rejection rather than a later disable.
+				await env.SESSIONS.put(`disabled:${body.id}`, '1');
+				await env.SESSIONS.delete(`session:${body.id}`);
+				auditDetail = { registrationNote: account.registration_note || null };
+				break;
+			}
 		default:
 			throw error(400, 'Invalid user action');
 	}
@@ -170,6 +199,9 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 				quota_messages: Number(updated.quota_messages ?? 0),
 				storage_used_bytes: Number(updated.storage_used_bytes ?? 0),
 				storage_backend: updated.storage_backend || 'r2',
+				registration_status: updated.registration_status || 'active',
+				registration_via: updated.registration_via || 'invite',
+				registration_note: updated.registration_note || null,
 				disabled: (await env.SESSIONS.get(`disabled:${body.id}`)) === '1',
 				has_session: Boolean(await env.SESSIONS.get(`session:${body.id}`))
 			} : null

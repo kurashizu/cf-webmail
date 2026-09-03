@@ -45,7 +45,18 @@
 		// `wrangler secret put`, not here.
 		"S3_ENDPOINT": "https://s3api.022025.xyz",
 		"S3_BUCKET": "krsz-mail",
-		"S3_REGION": "us-east-1"
+		"S3_REGION": "us-east-1",
+
+		// Open registration abuse gate. TURNSTILE_SITE_KEY is public (shipped in
+		// the registration page's HTML) so it lives here, not as a secret.
+		// TURNSTILE_SECRET_KEY and GEMINI_API_KEY are set via `wrangler secret put`.
+		// Fill in the real site key from the Cloudflare Turnstile dashboard before
+		// enabling open registration — an empty value disables the Turnstile
+		// widget client-side and the server-side check fails closed.
+		"TURNSTILE_SITE_KEY": "0x4AAAAAAD2Ilp9c8uP6HIzj",
+		// Which Gemini model reviews open-registration signups. Change this and
+		// redeploy to swap models — no code edit needed.
+		"GEMINI_MODEL": "gemini-3.5-flash"
 	},
 
 	"observability": {

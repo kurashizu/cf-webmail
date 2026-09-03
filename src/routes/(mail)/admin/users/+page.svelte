@@ -6,7 +6,7 @@
 		t(data.locale as Locale, key, params);
 	let users = $state<any[]>([]);
 	let invites = $state<any[]>([]);
-	let tab = $state<'users' | 'invites'>('users');
+	let tab = $state<'users' | 'invites' | 'pending'>('users');
 	let query = $state('');
 	let status = $state('all');
 	let loading = $state(true);
@@ -52,13 +52,24 @@
 		})
 	);
 
+	const pendingUsers = $derived(
+		users.filter((u) => u.registration_status === 'pending')
+	);
+	const filteredPending = $derived(
+		pendingUsers.filter((user) => {
+			const text = `${user.email} ${user.display_name || ''} ${user.registration_note || ''}`.toLowerCase();
+			return !query.trim() || text.includes(query.trim().toLowerCase());
+		})
+	);
+
 	const stats = $derived({
 		users: users.length,
 		active: users.filter((u) => !u.disabled).length,
 		unread: users.reduce((sum, u) => sum + Number(u.unread_count || 0), 0),
 		invites: invites.filter(
 			(i) => !i.consumed_at && (!i.expires_at || i.expires_at >= Date.now())
-		).length
+		).length,
+		pending: pendingUsers.length
 	});
 
 	async function requestJson(url: string, options: RequestInit = {}): Promise<any> {
@@ -281,7 +292,29 @@
 		return `${(bytes / 1024 ** i).toFixed(i ? 1 : 0)} ${units[i]}`;
 	}
 
-	function switchTab(next: 'users' | 'invites') {
+	async function pendingAction(user: any, action: 'approve_registration' | 'reject_registration') {
+		busy = user.id;
+		busyLabel = action === 'approve_registration' ? 'Approving…' : 'Rejecting…';
+		message = null;
+		try {
+			const result = await requestJson('/api/admin/users', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ id: user.id, action })
+			});
+			const index = users.findIndex((u) => u.id === user.id);
+			if (index >= 0) users[index] = { ...users[index], ...result.user };
+			users = [...users];
+			showSuccess(action === 'approve_registration' ? 'Registration approved.' : 'Registration rejected.');
+		} catch (error) {
+			showError(error);
+		} finally {
+			busy = null;
+			busyLabel = '';
+		}
+	}
+
+	function switchTab(next: 'users' | 'invites' | 'pending') {
 		tab = next;
 		status = 'all';
 		query = '';
@@ -342,6 +375,9 @@
 			<button class:active={tab === 'invites'} onclick={() => switchTab('invites')}>
 				{tt('admin.users.tabInvites')}<span>{stats.invites}</span>
 			</button>
+			<button class:active={tab === 'pending'} onclick={() => switchTab('pending')}>
+				{tt('admin.users.tabPending')}<span>{stats.pending}</span>
+			</button>
 		</div>
 		<div class="tools">
 			<label class="search">
@@ -354,23 +390,27 @@
 					bind:value={query}
 					placeholder={tab === 'users'
 						? tt('admin.users.searchUsers')
-						: tt('admin.users.searchInvites')}
+						: tab === 'invites'
+							? tt('admin.users.searchInvites')
+							: tt('admin.users.searchPending')}
 				/>
 			</label>
-			<select bind:value={status}>
-				{#if tab === 'users'}
-					<option value="all">{tt('admin.users.filterAll')}</option>
-					<option value="active">{tt('admin.users.filterActive')}</option>
-					<option value="disabled">{tt('admin.users.filterDisabled')}</option>
-					<option value="admin">{tt('admin.users.filterAdmin')}</option>
-					<option value="user">{tt('admin.users.filterMember')}</option>
-				{:else}
-					<option value="all">{tt('admin.users.filterAll')}</option>
-					<option value="active">{tt('admin.users.filterActive')}</option>
-					<option value="used">{tt('admin.users.filterUsed')}</option>
-					<option value="expired">{tt('admin.users.filterExpired')}</option>
-				{/if}
-			</select>
+			{#if tab !== 'pending'}
+				<select bind:value={status}>
+					{#if tab === 'users'}
+						<option value="all">{tt('admin.users.filterAll')}</option>
+						<option value="active">{tt('admin.users.filterActive')}</option>
+						<option value="disabled">{tt('admin.users.filterDisabled')}</option>
+						<option value="admin">{tt('admin.users.filterAdmin')}</option>
+						<option value="user">{tt('admin.users.filterMember')}</option>
+					{:else}
+						<option value="all">{tt('admin.users.filterAll')}</option>
+						<option value="active">{tt('admin.users.filterActive')}</option>
+						<option value="used">{tt('admin.users.filterUsed')}</option>
+						<option value="expired">{tt('admin.users.filterExpired')}</option>
+					{/if}
+				</select>
+			{/if}
 			{#if tab === 'invites'}
 				<button class="btn btn-primary" onclick={() => (modal = 'invite')}>
 					<svg viewBox="0 0 24 24" fill="none"
@@ -480,7 +520,7 @@
 				<div class="empty">{tt('admin.users.emptyUsers')}</div>
 			{/if}
 		</div>
-	{:else}
+	{:else if tab === 'invites'}
 		<div class="table-card card">
 			<div class="table-wrap">
 				<table>
@@ -554,6 +594,57 @@
 			</div>
 			{#if !filteredInvites.length}
 				<div class="empty">{tt('admin.users.emptyInvites')}</div>
+			{/if}
+		</div>
+	{:else}
+		<div class="table-card card">
+			<div class="table-wrap">
+				<table>
+					<thead>
+						<tr>
+							<th>{tt('admin.users.colUser')}</th>
+							<th>{tt('admin.users.colCreated')}</th>
+							<th>{tt('admin.users.colVia')}</th>
+							<th>{tt('admin.users.colNote')}</th>
+							<th></th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each filteredPending as user (user.id)}
+							<tr>
+								<td>
+									<strong>{user.display_name || user.local_part}</strong>
+									<span>{user.email}</span>
+								</td>
+								<td>{new Date(user.created_at).toLocaleString()}</td>
+								<td>
+									<span class="badge role">{tt('admin.users.viaOpen')}</span>
+									<small>{user.registration_ip || '—'}</small>
+								</td>
+								<td class="note-cell">{user.registration_note || tt('admin.users.noteNone')}</td>
+								<td>
+									<div class="row-actions">
+										<button
+											class="btn btn-primary"
+											disabled={busy === user.id}
+											onclick={() => pendingAction(user, 'approve_registration')}
+											>{tt('admin.users.approveButton')}</button
+										>
+										<button
+											class="btn danger"
+											disabled={busy === user.id}
+											onclick={() => pendingAction(user, 'reject_registration')}
+											>{tt('admin.users.rejectButton')}</button
+										>
+									</div>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+			{#if !filteredPending.length}
+				<div class="empty">{tt('admin.users.emptyPending')}</div>
 			{/if}
 		</div>
 	{/if}
@@ -1009,7 +1100,7 @@
 		white-space: nowrap;
 	}
 	th {
-		color: var(--text-muted);
+		color: var(--text-secondary);
 		font-size: 9px;
 		letter-spacing: 0.07em;
 		text-transform: uppercase;
@@ -1026,6 +1117,19 @@
 	}
 	tr.disabled {
 		opacity: 0.62;
+	}
+	.note-cell {
+		max-width: 320px;
+		white-space: normal;
+		color: var(--text-secondary);
+	}
+	.row-actions {
+		display: flex;
+		gap: var(--space-2);
+		flex-wrap: nowrap;
+	}
+	.row-actions .btn {
+		white-space: nowrap;
 	}
 
 	.badge {

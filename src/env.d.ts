@@ -23,4 +23,9 @@ interface Env {
 		S3_REGION?: string;
 		S3_ACCESS_KEY_ID?: string;
 		S3_SECRET_ACCESS_KEY?: string;
+		// Open registration — Turnstile human check + Gemini abuse review.
+		TURNSTILE_SITE_KEY?: string;
+		TURNSTILE_SECRET_KEY?: string;
+		GEMINI_API_KEY?: string;
+		GEMINI_MODEL?: string;
 	}
