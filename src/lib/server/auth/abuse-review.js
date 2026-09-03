@@ -68,18 +68,35 @@ export async function reviewRegistration({ db, geminiApiKey, geminiModel, localP
 		return { verdict: 'review', reason: 'no abuse model configured; queued for manual review', signals };
 	}
 
-	try {
-		const modelVerdict = await callGemini(geminiApiKey, geminiModel || DEFAULT_GEMINI_MODEL, { localPart, note, signals, userAgent });
-		return { ...modelVerdict, signals };
-	} catch (err) {
-		// Surface the real cause into the stored verdict, not just the console —
-		// console.error only reaches a live `wrangler tail` session, which is easy
-		// to miss for a one-off registration; registration_meta is durable and
-		// visible from the admin queue and D1 directly.
-		const errorDetail = err instanceof Error ? err.message : String(err);
-		console.error('[abuse-review] Gemini call failed, defaulting to review', errorDetail);
-		return { verdict: 'review', reason: 'abuse model call failed; queued for manual review', signals, errorDetail };
+	const model = geminiModel || DEFAULT_GEMINI_MODEL;
+
+	// Production has shown the model itself is sometimes just slow to respond
+	// (not a network blip) — the registration form now shows a "reviewing…"
+	// state with a spinner while this runs, so there's real room to wait
+	// rather than racing an aggressive timeout. Two attempts at ~28s each
+	// give roughly a minute of total tolerance while still guaranteeing a
+	// registration eventually resolves instead of hanging indefinitely.
+	let lastErrorDetail = '';
+	for (let attempt = 1; attempt <= 2; attempt++) {
+		try {
+			const modelVerdict = await callGemini(geminiApiKey, model, { localPart, note, signals, userAgent });
+			return { ...modelVerdict, signals };
+		} catch (err) {
+			lastErrorDetail = err instanceof Error ? err.message : String(err);
+			console.error(`[abuse-review] Gemini call attempt ${attempt} failed`, lastErrorDetail);
+		}
 	}
+
+	// Surface the real cause into the stored verdict, not just the console —
+	// console.error only reaches a live `wrangler tail` session, which is easy
+	// to miss for a one-off registration; registration_meta is durable and
+	// visible from the admin queue and D1 directly.
+	return {
+		verdict: 'review',
+		reason: 'abuse model call failed; queued for manual review',
+		signals,
+		errorDetail: lastErrorDetail
+	};
 }
 
 // Overridable via the GEMINI_MODEL Worker var so the model can be swapped
@@ -132,13 +149,13 @@ async function callGemini(apiKey, model, { localPart, note, signals, userAgent }
 				temperature: 0
 			}
 		}),
-		// A hung call must not hang the registration request — the caller
-		// catches any rejection here and falls back to 'review'. 8s proved too
-		// tight in production (every open registration from an AU-based Workers
-		// colo hit this abort and fell back), likely intercontinental latency to
-		// Google's API on top of the Workers runtime's own overhead — 20s gives
-		// real headroom while still bounding worst-case registration latency.
-		signal: AbortSignal.timeout(20000)
+		// A hung call must still resolve eventually — the caller retries once on
+		// any failure (see reviewRegistration), so this is a per-attempt budget,
+		// not the whole allowance. 8s and then 20s both proved too tight in
+		// production; the model is genuinely slow sometimes, not just flaky, so
+		// this is generous on purpose — the UI now shows a "reviewing…" state
+		// while it waits instead of looking frozen.
+		signal: AbortSignal.timeout(28000)
 	});
 
 	if (!res.ok) {

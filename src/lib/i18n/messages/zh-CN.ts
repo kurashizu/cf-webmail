@@ -116,6 +116,8 @@ const zhCN: Dict = {
 	'auth.pendingBackToLogin': '返回登录',
 	'auth.termsHint': '点击"{cta}"，即表示你同意我们的',
 	'auth.termsLink': '服务条款',
+	'auth.reviewingCta': '审核中…',
+	'auth.reviewingHint': '最长可能需要一分钟左右，请不要关闭此页面。',
 
 	// ─── mail layout ─────────────────────────────────────────────────────
 	'mail.searchPlaceholder': '搜索邮件（Ctrl+K）',

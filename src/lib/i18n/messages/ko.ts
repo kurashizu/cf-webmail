@@ -118,6 +118,8 @@ const ko: Dict = {
 	'auth.pendingBackToLogin': '로그인으로 돌아가기',
 	'auth.termsHint': '"{cta}"를 클릭하면 아래 내용에 동의하는 것으로 간주됩니다:',
 	'auth.termsLink': '이용약관',
+	'auth.reviewingCta': '검토 중…',
+	'auth.reviewingHint': '최대 1분 정도 걸릴 수 있습니다. 이 페이지를 닫지 마세요.',
 
 	// ─── mail layout ─────────────────────────────────────────────────────
 	'mail.searchPlaceholder': '메일 검색（Ctrl+K）',

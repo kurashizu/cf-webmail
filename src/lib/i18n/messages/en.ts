@@ -119,6 +119,8 @@ const en = {
 	'auth.pendingBackToLogin': 'Back to sign in',
 	'auth.termsHint': 'By clicking "{cta}", you agree to our',
 	'auth.termsLink': 'Terms of Service',
+	'auth.reviewingCta': 'Reviewing…',
+	'auth.reviewingHint': 'This can take up to a minute — please don’t close this page.',
 
 	// ─── mail layout / sidebar ───────────────────────────────────────────
 	'mail.searchPlaceholder': 'Search mail (Ctrl+K)',

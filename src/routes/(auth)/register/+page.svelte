@@ -183,8 +183,17 @@
 			{/if}
 
 			<button type="submit" class="btn btn-primary submit" disabled={submitting}>
-				{tt('auth.createMailboxCta')}
+				{#if submitting && mode === 'open'}
+					<span class="spinner" aria-hidden="true"></span>
+					{tt('auth.reviewingCta')}
+				{:else}
+					{tt('auth.createMailboxCta')}
+				{/if}
 			</button>
+
+			{#if submitting && mode === 'open'}
+				<p class="submitting-hint" role="status">{tt('auth.reviewingHint')}</p>
+			{/if}
 
 			<p class="terms-hint">
 				{tt('auth.termsHint', { cta: tt('auth.createMailboxCta') })}
@@ -233,8 +242,30 @@
 		color: var(--text-secondary);
 		font-size: 13px;
 	}
-	.submit { justify-content: center; padding: var(--space-3); font-weight: 600; margin-top: var(--space-2); }
-	.submit:disabled { opacity: 0.6; cursor: default; }
+	.submit { justify-content: center; align-items: center; gap: var(--space-2); padding: var(--space-3); font-weight: 600; margin-top: var(--space-2); }
+	.submit:disabled { opacity: 0.8; cursor: default; }
+	.spinner {
+		width: 14px;
+		height: 14px;
+		border: 2px solid color-mix(in srgb, currentColor 30%, transparent);
+		border-top-color: currentColor;
+		border-radius: 50%;
+		animation: spin 0.7s linear infinite;
+		flex: none;
+	}
+	@keyframes spin {
+		to { transform: rotate(360deg); }
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.spinner { animation: none; }
+	}
+	.submitting-hint {
+		margin: calc(var(--space-2) * -1) 0 0;
+		text-align: center;
+		font-size: 12px;
+		color: var(--text-secondary);
+		line-height: 1.5;
+	}
 	.error {
 			padding: var(--space-3);
 			border-radius: var(--radius-md);

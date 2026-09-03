@@ -117,6 +117,8 @@ const ja: Dict = {
 	'auth.pendingBackToLogin': 'ログインへ戻る',
 	'auth.termsHint': '「{cta}」をクリックすることで、以下に同意したものとみなされます:',
 	'auth.termsLink': '利用規約',
+	'auth.reviewingCta': '審査中…',
+	'auth.reviewingHint': '最大で1分ほどかかることがあります。このページを閉じないでください。',
 
 	// ─── mail layout ─────────────────────────────────────────────────────
 	'mail.searchPlaceholder': 'メールを検索（Ctrl+K）',

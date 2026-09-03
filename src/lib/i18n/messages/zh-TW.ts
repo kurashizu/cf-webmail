@@ -116,6 +116,8 @@ const zhTW: Dict = {
 	'auth.pendingBackToLogin': '返回登入',
 	'auth.termsHint': '點擊「{cta}」，即表示你同意我們的',
 	'auth.termsLink': '服務條款',
+	'auth.reviewingCta': '審核中…',
+	'auth.reviewingHint': '最長可能需要一分鐘左右，請不要關閉此頁面。',
 
 	// ─── mail layout ─────────────────────────────────────────────────────
 	'mail.searchPlaceholder': '搜尋郵件（Ctrl+K）',
