@@ -95,6 +95,7 @@ const zhTW: Dict = {
 	'auth.registerSubtitle': '選擇本機部分以取得 your@{domain} 地址',
 	'auth.localPartLabel': '本機部分',
 	'auth.localPartPlaceholder': 'kurashizu',
+	'auth.localPartMinOpen': '公開註冊要求本機部分至少 5 個字元',
 	'auth.displayNameLabel': '顯示名稱（選填）',
 	'auth.displayNamePlaceholder': 'Kurashizu',
 	'auth.passwordHint': '密碼（至少 6 個字元）',

@@ -98,6 +98,7 @@ const en = {
 	'auth.registerSubtitle': 'Pick a local part to get your@{domain} address',
 	'auth.localPartLabel': 'Local part',
 	'auth.localPartPlaceholder': 'kurashizu',
+	'auth.localPartMinOpen': 'Must be at least 5 characters for public registration',
 	'auth.displayNameLabel': 'Display name (optional)',
 	'auth.displayNamePlaceholder': 'Kurashizu',
 	'auth.passwordHint': 'Password (min 6 characters)',

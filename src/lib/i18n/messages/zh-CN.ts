@@ -95,6 +95,7 @@ const zhCN: Dict = {
 	'auth.registerSubtitle': '选择一个本地部分，获得 your@{domain} 地址',
 	'auth.localPartLabel': '本地部分',
 	'auth.localPartPlaceholder': 'kurashizu',
+	'auth.localPartMinOpen': '公开注册要求本地部分至少 5 个字符',
 	'auth.displayNameLabel': '显示名称（可选）',
 	'auth.displayNamePlaceholder': 'Kurashizu',
 	'auth.passwordHint': '密码（至少 6 个字符）',

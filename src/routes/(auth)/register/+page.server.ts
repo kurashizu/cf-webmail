@@ -31,6 +31,7 @@ export const load: PageServerLoad = async ({ platform, url }) => {
 
 const LOCAL_PART_RE = /^[a-z0-9][a-z0-9._-]{1,30}$/;
 const NOTE_MAX_LENGTH = 500;
+const OPEN_LOCAL_PART_MIN_LENGTH = 5;
 
 export const actions: Actions = {
 	default: async ({ request, platform, cookies, url, getClientAddress }) => {
@@ -63,6 +64,17 @@ export const actions: Actions = {
 		if (!LOCAL_PART_RE.test(localPart)) {
 			return fail(400, {
 				error: 'Local part must be 2-31 chars, lowercase letters, digits, dot, underscore, or dash',
+				localPart,
+				displayName,
+				inviteCode
+			});
+		}
+		// Open registration only: a longer minimum makes cheap enumeration/land-grab
+		// signups (single letters, two-char combos) less attractive. Invite-issued
+		// addresses can still be short — an admin already chose to hand one out.
+		if (openMode && localPart.length < OPEN_LOCAL_PART_MIN_LENGTH) {
+			return fail(400, {
+				error: `Local part must be at least ${OPEN_LOCAL_PART_MIN_LENGTH} characters for public registration`,
 				localPart,
 				displayName,
 				inviteCode
@@ -137,7 +149,8 @@ export const actions: Actions = {
 				localPart,
 				note,
 				ip,
-				userAgent
+				userAgent,
+				cf: platform.cf
 			});
 			reviewMeta = { verdict: result.verdict, reason: result.reason, signals: result.signals };
 

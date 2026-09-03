@@ -96,6 +96,7 @@ const ja: Dict = {
 	'auth.registerSubtitle': 'ローカル部分を選んで your@{domain} アドレスを取得',
 	'auth.localPartLabel': 'ローカル部分',
 	'auth.localPartPlaceholder': 'kurashizu',
+	'auth.localPartMinOpen': '公開登録では 5 文字以上にしてください',
 	'auth.displayNameLabel': '表示名（任意）',
 	'auth.displayNamePlaceholder': 'Kurashizu',
 	'auth.passwordHint': 'パスワード（6 文字以上）',

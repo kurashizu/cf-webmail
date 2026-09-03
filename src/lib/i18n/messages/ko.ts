@@ -97,6 +97,7 @@ const ko: Dict = {
 	'auth.registerSubtitle': '로컬 부분을 선택하여 your@{domain} 주소를 받으세요',
 	'auth.localPartLabel': '로컬 부분',
 	'auth.localPartPlaceholder': 'kurashizu',
+	'auth.localPartMinOpen': '공개 가입은 5자 이상이어야 합니다',
 	'auth.displayNameLabel': '표시 이름（선택）',
 	'auth.displayNamePlaceholder': 'Kurashizu',
 	'auth.passwordHint': '비밀번호（6 자 이상）',
