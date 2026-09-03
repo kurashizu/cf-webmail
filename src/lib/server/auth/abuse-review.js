@@ -149,9 +149,44 @@ async function callGemini(apiKey, model, { localPart, note, signals, userAgent }
 	const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
 	if (!text) throw new Error('Gemini response had no text part');
 
-	const parsed = JSON.parse(text);
+	const parsed = JSON.parse(extractFirstJsonObject(text));
 	if (!['allow', 'review', 'block'].includes(parsed.verdict)) {
 		throw new Error(`Gemini returned an invalid verdict: ${parsed.verdict}`);
 	}
 	return { verdict: parsed.verdict, reason: String(parsed.reason || '').slice(0, 500) };
+}
+
+/**
+ * Even with responseMimeType + a strict responseSchema, a smaller model can
+ * occasionally emit valid JSON followed by trailing junk (observed in
+ * production: an extra line after the object, likely a repetition/decoding
+ * artifact) — a plain JSON.parse(text) then throws "Unexpected non-
+ * whitespace character after JSON" and the whole registration falls back to
+ * review even though the model's actual verdict was right there. Scan for
+ * the first balanced {...} object by brace-depth and parse only that,
+ * ignoring anything after it.
+ * @param {string} text
+ */
+function extractFirstJsonObject(text) {
+	const start = text.indexOf('{');
+	if (start === -1) throw new Error('Gemini response had no JSON object');
+	let depth = 0;
+	let inString = false;
+	let escaped = false;
+	for (let i = start; i < text.length; i++) {
+		const ch = text[i];
+		if (inString) {
+			if (escaped) escaped = false;
+			else if (ch === '\\') escaped = true;
+			else if (ch === '"') inString = false;
+			continue;
+		}
+		if (ch === '"') inString = true;
+		else if (ch === '{') depth++;
+		else if (ch === '}') {
+			depth--;
+			if (depth === 0) return text.slice(start, i + 1);
+		}
+	}
+	throw new Error('Gemini response JSON object was not properly closed');
 }
