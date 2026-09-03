@@ -151,3 +151,12 @@ export async function listSessions(kv, accountId) {
 		.map((s) => ({ sid: s.sid, lastSeen: s.lastSeen, createdAt: s.createdAt, userAgent: s.userAgent || null }))
 		.sort((a, b) => b.lastSeen - a.lastSeen);
 }
+
+/**
+ * Cheap existence check for the admin users list — whether this account has
+ * any device currently signed in, without needing the full session list.
+ */
+export async function hasActiveSessions(kv, accountId) {
+	const list = await readSessionList(kv, accountId);
+	return list.length > 0;
+}

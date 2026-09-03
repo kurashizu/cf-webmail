@@ -840,7 +840,7 @@
 						<div class="action-row">
 							<div>
 								<strong>Force sign out</strong>
-								<span>Revoke the currently active session.</span>
+								<span>Revoke all of this user's active sessions, across every device.</span>
 							</div>
 							<button
 								class="btn btn-ghost"

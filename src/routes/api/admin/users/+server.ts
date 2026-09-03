@@ -13,6 +13,7 @@ import { hashPassword, newSalt } from '$lib/server/crypto/kdf';
 import { MAX_QUOTA_BYTES, MIN_QUOTA_BYTES, MAX_QUOTA_MESSAGES, MAX_DAILY_SEND_QUOTA } from '$lib/server/db/storage';
 import { getStorageForAccount, isStorageConfigured, STORAGE_BACKENDS } from '$lib/server/storage';
 import { auditAsync } from '$lib/server/audit/log';
+import { destroyAllSessions, hasActiveSessions } from '$lib/server/auth/session';
 
 const PASSWORD_ITERATIONS = 100_000;
 
@@ -52,7 +53,7 @@ async function serializeAccounts(env: App.Platform['env']) {
 			// read as 0 here rather than showing yesterday's number.
 			daily_send_used: Number(account.daily_send_day) === today ? Number(account.daily_send_count || 0) : 0,
 			disabled: (await env.SESSIONS.get(`disabled:${account.id}`)) === '1',
-			has_session: Boolean(await env.SESSIONS.get(`session:${account.id}`))
+			has_session: await hasActiveSessions(env.SESSIONS, account.id)
 		}))
 	);
 }
@@ -87,7 +88,7 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 			if (isSelf) throw error(400, 'You cannot disable your own account.');
 			if (account.role === 'admin' && await adminCount(env.DB) <= 1) throw error(409, 'The last administrator cannot be disabled.');
 			await env.SESSIONS.put(`disabled:${body.id}`, '1');
-			await env.SESSIONS.delete(`session:${body.id}`);
+			await destroyAllSessions(env.SESSIONS, body.id);
 			break;
 		case 'enable':
 			await env.SESSIONS.delete(`disabled:${body.id}`);
@@ -104,7 +105,7 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 			break;
 		case 'revoke_sessions':
 			if (isSelf) throw error(400, 'Use Sign out to end your current session.');
-			await env.SESSIONS.delete(`session:${body.id}`);
+			await destroyAllSessions(env.SESSIONS, body.id);
 			break;
 		case 'update': {
 			const displayName = String(body.display_name || '').trim();
@@ -116,7 +117,7 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 				throw error(409, 'The last administrator cannot be demoted.');
 			}
 			await updateAccountByAdmin(env.DB, body.id, displayName, role);
-			if (account.role !== role) await env.SESSIONS.delete(`session:${body.id}`);
+			if (account.role !== role) await destroyAllSessions(env.SESSIONS, body.id);
 			auditDetail = { displayName, previousRole: account.role, role };
 			break;
 		}
@@ -128,7 +129,7 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 					const salt = newSalt();
 					const hash = await hashPassword(password, salt, PASSWORD_ITERATIONS);
 					await updateAccountPassword(env.DB, body.id, hash, salt, PASSWORD_ITERATIONS);
-					await env.SESSIONS.delete(`session:${body.id}`);
+					await destroyAllSessions(env.SESSIONS, body.id);
 					break;
 				}
 				case 'set_quota': {
@@ -207,7 +208,7 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 					}
 				}
 				await deleteAccountData(env.DB, body.id);
-				await env.SESSIONS.delete(`session:${body.id}`);
+				await destroyAllSessions(env.SESSIONS, body.id);
 				await env.SESSIONS.delete(`disabled:${body.id}`);
 				auditDetail = { registrationNote: account.registration_note || null };
 				auditAsync(platform!.context, env.DB, {
@@ -251,7 +252,7 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 				daily_send_quota: Number(updated.daily_send_quota ?? 0),
 				daily_send_used: Number(updated.daily_send_day) === today ? Number(updated.daily_send_count || 0) : 0,
 				disabled: (await env.SESSIONS.get(`disabled:${body.id}`)) === '1',
-				has_session: Boolean(await env.SESSIONS.get(`session:${body.id}`))
+				has_session: await hasActiveSessions(env.SESSIONS, body.id)
 			} : null
 		});
 	};
@@ -275,7 +276,7 @@ export const DELETE: RequestHandler = async ({ locals, platform, request }) => {
 		}
 	}
 	await deleteAccountData(env.DB, body.id);
-	await env.SESSIONS.delete(`session:${body.id}`);
+	await destroyAllSessions(env.SESSIONS, body.id);
 	await env.SESSIONS.delete(`disabled:${body.id}`);
 
 	auditAsync(platform!.context, env.DB, {
