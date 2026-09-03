@@ -23,17 +23,16 @@ export const handle: Handle = async ({ event, resolve }) => {
 	if (token && event.platform?.env) {
 		try {
 			const payload = await verifySession(token, event.platform.env.JWT_SECRET);
-			const valid = await isSessionValid(
-				event.platform.env.SESSIONS,
-				payload.accountId,
-				token
-			);
+			const valid = payload.sid
+				? await isSessionValid(event.platform.env.SESSIONS, payload.accountId, payload.sid, token)
+				: false;
 			const disabled = await event.platform.env.SESSIONS.get(`disabled:${payload.accountId}`);
-			if (valid && disabled !== '1') {
+			if (valid && payload.sid && disabled !== '1') {
 				event.locals.user = {
 					email: payload.email,
 					accountId: payload.accountId,
-					role: payload.role === 'admin' ? 'admin' : 'user'
+					role: payload.role === 'admin' ? 'admin' : 'user',
+					sid: payload.sid
 				};
 			}
 		} catch {

@@ -228,11 +228,11 @@ export const actions: Actions = {
 			return { pending: true, email };
 		}
 
-		const token = await signSession(
+		const { token, sid } = await signSession(
 			{ accountId: id, email, role: 'user' },
 			platform.env.JWT_SECRET
 		);
-		await registerSession(platform.env.SESSIONS, id, token);
+		await registerSession(platform.env.SESSIONS, id, sid, token, request.headers.get('user-agent'));
 
 		cookies.set('session', token, {
 			path: '/',

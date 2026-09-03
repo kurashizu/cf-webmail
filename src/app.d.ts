@@ -9,6 +9,7 @@ declare global {
 				email: string;
 				accountId: string;
 				role: 'admin' | 'user';
+				sid: string;
 			} | null;
 			locale: Locale;
 		}

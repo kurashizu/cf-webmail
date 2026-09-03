@@ -6,7 +6,7 @@ import {
 	updateAccountPassword,
 	updateAccountProfile
 } from '$lib/server/db/queries';
-import { registerSession, signSession } from '$lib/server/auth/session';
+import { destroyAllSessions, registerSession, signSession } from '$lib/server/auth/session';
 import { auditAsync } from '$lib/server/audit/log';
 
 const PASSWORD_ITERATIONS = 100_000;
@@ -94,11 +94,15 @@ export const actions: Actions = {
 			PASSWORD_ITERATIONS
 		);
 
-		const token = await signSession(
+		// A password change invalidates every other signed-in device — only the
+		// session making this change survives, re-issued fresh below.
+		await destroyAllSessions(platform!.env.SESSIONS, account.id);
+
+		const { token, sid } = await signSession(
 			{ accountId: account.id, email: account.email, role: account.role },
 			platform!.env.JWT_SECRET
 		);
-		await registerSession(platform!.env.SESSIONS, account.id, token);
+		await registerSession(platform!.env.SESSIONS, account.id, sid, token, request.headers.get('user-agent'));
 		cookies.set('session', token, {
 			path: '/',
 			httpOnly: true,

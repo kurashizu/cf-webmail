@@ -71,11 +71,17 @@ export const actions: Actions = {
 			return fail(403, { error: 'This account has been disabled. Contact the administrator.', email });
 		}
 
-		const token = await signSession(
+		const { token, sid } = await signSession(
 			{ accountId: String(account.id), email: String(account.email), role: account.role === 'admin' ? 'admin' : 'user' },
 			platform.env.JWT_SECRET
 		);
-		await registerSession(platform.env.SESSIONS, String(account.id), token);
+		await registerSession(
+			platform.env.SESSIONS,
+			String(account.id),
+			sid,
+			token,
+			request.headers.get('user-agent')
+		);
 
 		cookies.set('session', token, {
 			path: '/',

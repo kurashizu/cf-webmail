@@ -9,8 +9,8 @@ export const load: PageServerLoad = async () => {
 
 export const actions: Actions = {
 	default: async ({ locals, platform, cookies }) => {
-		if (locals.user && platform?.env?.SESSIONS) {
-			await destroySession(platform.env.SESSIONS, locals.user.accountId);
+		if (locals.user && platform?.env?.SESSIONS && locals.user.sid) {
+			await destroySession(platform.env.SESSIONS, locals.user.accountId, locals.user.sid);
 			if (platform.env.DB) {
 				auditAsync(platform.context, platform.env.DB, {
 					accountId: locals.user.accountId,
