@@ -62,7 +62,7 @@ async function signedRequest(config, req) {
 	const host = url.host;
 
 	const { amzDate: xAmzDate, dateStamp } = amzDate();
-	const payloadHash = req.body != null ? await sha256Hex(await toBytes(req.body)) : await sha256Hex('');
+	const payloadHash = req.body != null ? await sha256Hex(await s3ToBytes(req.body)) : await sha256Hex('');
 
 	const headers = new Headers(req.extraHeaders || {});
 	headers.set('host', host);
@@ -105,7 +105,11 @@ async function signedRequest(config, req) {
 	return fetch(url.toString(), { method: req.method, headers, body: req.body ?? undefined });
 }
 
-async function toBytes(body) {
+// Named s3ToBytes (not toBytes) because the email-handler bundle
+// concatenates this file's top-level declarations into the same scope as
+// inbound.js, which already declares its own toBytes — a plain "toBytes"
+// here would be a duplicate top-level declaration and fail the build.
+async function s3ToBytes(body) {
 	if (body == null) return new Uint8Array(0);
 	if (body instanceof Uint8Array) return body;
 	if (body instanceof ArrayBuffer) return new Uint8Array(body);
@@ -124,7 +128,7 @@ export function createS3Storage(config) {
 
 		/** @param {string} key @param {Uint8Array|ArrayBuffer|string} data @param {{httpMetadata?: {contentType?: string}}} [opts] */
 		async put(key, data, opts = {}) {
-			const bytes = await toBytes(data);
+			const bytes = await s3ToBytes(data);
 			const res = await signedRequest(config, {
 				method: 'PUT',
 				key,
