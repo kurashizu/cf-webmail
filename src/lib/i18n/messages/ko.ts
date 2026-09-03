@@ -247,6 +247,7 @@ const ko: Dict = {
 	'compose.sentSuccess': '메일을 보냈습니다！',
 	'compose.sendError': '보내기에 실패했습니다. 다시 시도해 주세요.',
 	'compose.exitConfirm': '보내지 않은 변경 사항이 있습니다. 그래도 나가시겠습니까？',
+	'compose.sendQuota': '오늘 발송: {used} / {quota}',
 	'compose.storageWarning.bytes':
 		'이 메일을 보내면 저장 용량을 초과합니다. 먼저 용량을 확보해 주세요.',
 	'compose.storageWarning.messages':

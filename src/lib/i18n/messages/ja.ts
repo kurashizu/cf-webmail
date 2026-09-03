@@ -246,6 +246,7 @@ const ja: Dict = {
 	'compose.sentSuccess': 'メールを送信しました！',
 	'compose.sendError': '送信に失敗しました。もう一度お試しください。',
 	'compose.exitConfirm': '未送信の変更があります。離れてもよろしいですか？',
+	'compose.sendQuota': '本日の送信数：{used} / {quota}',
 	'compose.storageWarning.bytes':
 		'このメールを送信するとストレージ容量を超過します。先に空き容量を確保してください。',
 	'compose.storageWarning.messages':

@@ -1,7 +1,11 @@
 import type { Actions, PageServerLoad } from './$types';
 import { fail, redirect } from '@sveltejs/kit';
 import { sendOutbound } from '$lib/server/mail/outbound';
-import { getDraft, deleteDraft } from '$lib/server/db/queries';
+import { getDraft, deleteDraft, findAccountById } from '$lib/server/db/queries';
+
+function todayDayNumber() {
+	return Math.floor(Date.now() / (24 * 60 * 60 * 1000));
+}
 
 const ID_RE = /^[0-9a-f-]{36}$/i;
 
@@ -48,11 +52,19 @@ export const load: PageServerLoad = async ({ locals, platform, url }) => {
 		}
 	}
 
+	const account: any = await findAccountById(env.DB, locals.user.accountId);
+	const today = todayDayNumber();
+	const sendQuota = {
+		quota: Number(account?.daily_send_quota ?? 0),
+		used: Number(account?.daily_send_day) === today ? Number(account?.daily_send_count || 0) : 0
+	};
+
 	return {
 		user: locals.user,
 		domain: env.MAIL_DOMAIN || 'krsz.in',
 		draftId,
-		prefill
+		prefill,
+		sendQuota
 	};
 };
 

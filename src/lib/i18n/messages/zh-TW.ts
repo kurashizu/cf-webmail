@@ -243,6 +243,7 @@ const zhTW: Dict = {
 	'compose.sentSuccess': '郵件已寄出！',
 	'compose.sendError': '寄出失敗，請重試。',
 	'compose.exitConfirm': '尚有未寄出的修改，確定要離開？',
+	'compose.sendQuota': '今日已寄出 {used} / {quota}',
 	'compose.storageWarning.bytes': '寄出這封郵件將超出儲存配額。請先清理空間。',
 	'compose.storageWarning.messages': '寄出這封郵件將超出郵件數量配額。請先清理空間。',
 

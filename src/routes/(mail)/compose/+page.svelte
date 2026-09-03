@@ -216,6 +216,11 @@ function formatMB(bytes: number) {
 					{:else if draftStatus === 'error'}<span class="status-error">{tt('compose.draftStatus.error')}</span>{/if}
 				</span>
 				<span class="file-info" class:over-limit={totalSize > 26_214_400}>{files.length ? `${tt('common.messageCount', { count: files.length })} · ${formatSize(totalSize)}` : tt('compose.noAttachments')}</span>
+				{#if data.sendQuota.quota > 0}
+					<span class="send-quota" class:quota-exhausted={data.sendQuota.used >= data.sendQuota.quota}>
+						{tt('compose.sendQuota', { used: data.sendQuota.used, quota: data.sendQuota.quota })}
+					</span>
+				{/if}
 			</div>
 			<div class="footer-actions">
 				<button type="button" class="btn save-draft" onclick={saveDraft} disabled={sent || !hasContent || draftStatus === 'saving'} title={tt('compose.saveDraft')}>
@@ -297,6 +302,8 @@ function formatMB(bytes: number) {
 	}
 	.draft-status .status-error { color: var(--color-danger); }
 	.file-info { color: var(--text-muted); font-size: 10px; }
+	.send-quota { color: var(--text-muted); font-size: 10px; }
+	.send-quota.quota-exhausted { color: var(--color-danger); }
 	.footer-actions { display: flex; align-items: center; gap: var(--space-2); }
 	.save-draft { display: inline-flex; align-items: center; gap: 7px; padding: 10px 14px; color: var(--text-secondary); border-color: var(--border-hover); transition: background var(--transition-base), color var(--transition-base), border-color var(--transition-base); }
 	.save-draft:hover { background: var(--accent-subtle); border-color: var(--border-hover); color: var(--text-primary); }

@@ -245,6 +245,7 @@ const zhCN: Dict = {
 	'compose.sentSuccess': '邮件已发送！',
 	'compose.sendError': '发送失败，请重试。',
 	'compose.exitConfirm': '有未发送的修改，确定离开？',
+	'compose.sendQuota': '今日已发送 {used} / {quota}',
 	'compose.storageWarning.bytes':
 		'发送这封邮件将超出存储配额。请先清理空间。',
 	'compose.storageWarning.messages':

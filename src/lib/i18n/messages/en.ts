@@ -249,6 +249,7 @@ const en = {
 	'compose.sentSuccess': 'Message sent!',
 	'compose.sendError': 'Could not send the message. Please try again.',
 	'compose.exitConfirm': 'You have unsent changes. Leave anyway?',
+	'compose.sendQuota': '{used} / {quota} sent today',
 	'compose.storageWarning.bytes':
 		'Sending this message will push you over your storage quota. Free up space before sending.',
 	'compose.storageWarning.messages':
