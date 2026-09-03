@@ -8,6 +8,9 @@ export const MAX_QUOTA_BYTES = 10 * 1024 * 1024 * 1024; // 10 GiB hard ceiling p
 export const MIN_QUOTA_BYTES = 100 * 1024 * 1024;       // 100 MiB minimum (unless 0 = unlimited)
 export const MAX_QUOTA_MESSAGES = 50000;
 
+export const DEFAULT_DAILY_SEND_QUOTA = 10;
+export const MAX_DAILY_SEND_QUOTA = 2000; // hard ceiling — this is what actually protects the shared Resend account limit
+
 export class StorageQuotaError extends Error {
 	constructor(used, quota, incoming, kind = 'storage') {
 		super(`Mailbox ${kind} quota exceeded: ${used}/${quota}, incoming ${incoming}`);
@@ -16,6 +19,53 @@ export class StorageQuotaError extends Error {
 		this.used = used;
 		this.quota = quota;
 		this.incoming = incoming;
+	}
+}
+
+export class DailySendQuotaError extends Error {
+	constructor(used, quota) {
+		super(`Daily send quota exceeded: ${used}/${quota}`);
+		this.code = 'DAILY_SEND_QUOTA_EXCEEDED';
+		this.used = used;
+		this.quota = quota;
+	}
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Atomically reserve one outbound-send slot for today, counting the attempt
+ * regardless of whether the send itself later succeeds — this exists to cap
+ * how often the *shared* Resend account gets called, so it must count calls
+ * made, not just messages that were ultimately delivered. A single
+ * conditional UPDATE does the day-rollover check, the quota check, and the
+ * increment together, so two concurrent sends can't both slip through on
+ * the same stale read.
+ * @param {D1Database} db
+ * @param {string} accountId
+ * @throws {DailySendQuotaError} when the account is already at its cap for today
+ */
+export async function reserveDailySendSlot(db, accountId) {
+	const today = Math.floor(Date.now() / DAY_MS);
+	const result = await db
+		.prepare(
+			`UPDATE accounts
+			    SET daily_send_count = CASE WHEN daily_send_day = ? THEN daily_send_count + 1 ELSE 1 END,
+			        daily_send_day = ?
+			  WHERE id = ?
+			    AND (daily_send_quota = 0
+			         OR (CASE WHEN daily_send_day = ? THEN daily_send_count ELSE 0 END) < daily_send_quota)`
+		)
+		.bind(today, today, accountId, today)
+		.run();
+
+	if (result.meta.changes === 0) {
+		const row = await db
+			.prepare('SELECT daily_send_quota, daily_send_count, daily_send_day FROM accounts WHERE id = ?')
+			.bind(accountId)
+			.first();
+		const used = row && Number(row.daily_send_day) === today ? Number(row.daily_send_count) : 0;
+		throw new DailySendQuotaError(used, Number(row?.daily_send_quota ?? DEFAULT_DAILY_SEND_QUOTA));
 	}
 }
 

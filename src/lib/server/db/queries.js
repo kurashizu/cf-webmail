@@ -120,6 +120,8 @@ export async function listAccounts(db) {
 			        a.created_at, a.updated_at,
 			        a.quota_bytes, a.quota_messages, a.storage_used_bytes, a.storage_backend,
 			        a.registration_status, a.registration_via, a.registration_note,
+			        a.registration_ip, a.registration_meta,
+			        a.daily_send_quota, a.daily_send_count, a.daily_send_day,
 			        COUNT(DISTINCT m.id) AS message_count,
 			        COALESCE(SUM(CASE WHEN m.folder = 'INBOX' AND m.flags NOT LIKE '%\\Seen%' THEN 1 ELSE 0 END), 0) AS unread_count,
 			        MAX(m.received_at) AS last_message_at,

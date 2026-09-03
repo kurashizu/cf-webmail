@@ -23,6 +23,7 @@
 	let deleteConfirmation = $state('');
 	let quotaMb = $state('0');
 	let quotaMessages = $state('0');
+	let dailySendQuota = $state('10');
 	let copied = $state('');
 
 	const filteredUsers = $derived(
@@ -123,6 +124,7 @@
 		selected = { ...user };
 		quotaMb = user.quota_bytes ? String(Math.round(Number(user.quota_bytes) / (1024 * 1024))) : '0';
 		quotaMessages = String(Number(user.quota_messages) || 0);
+		dailySendQuota = String(Number(user.daily_send_quota ?? 10));
 		modal = null;
 		message = null;
 	}
@@ -183,6 +185,7 @@
 	async function saveQuota() {
 		const mb = Number(quotaMb);
 		const messages = Number(quotaMessages);
+		const dailySend = Number(dailySendQuota);
 		if (!Number.isFinite(mb) || mb < 0) {
 			message = { kind: 'error', text: 'Storage quota must be 0 (unlimited) or a positive number of MB.' };
 			return;
@@ -191,9 +194,14 @@
 			message = { kind: 'error', text: 'Message quota must be 0 (unlimited) or a positive number.' };
 			return;
 		}
+		if (!Number.isFinite(dailySend) || dailySend < 0) {
+			message = { kind: 'error', text: 'Daily send quota must be 0 (unlimited) or a positive number.' };
+			return;
+		}
 		await userAction('set_quota', {
 			quota_bytes: mb === 0 ? 0 : Math.round(mb * 1024 * 1024),
-			quota_messages: messages
+			quota_messages: messages,
+			daily_send_quota: dailySend
 		});
 	}
 
@@ -302,10 +310,14 @@
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({ id: user.id, action })
 			});
-			const index = users.findIndex((u) => u.id === user.id);
-			if (index >= 0) users[index] = { ...users[index], ...result.user };
-			users = [...users];
-			showSuccess(action === 'approve_registration' ? 'Registration approved.' : 'Registration rejected.');
+			if (result.deleted) {
+				users = users.filter((u) => u.id !== user.id);
+			} else {
+				const index = users.findIndex((u) => u.id === user.id);
+				if (index >= 0) users[index] = { ...users[index], ...result.user };
+				users = [...users];
+			}
+			showSuccess(action === 'approve_registration' ? 'Registration approved.' : 'Registration rejected and removed.');
 		} catch (error) {
 			showError(error);
 		} finally {
@@ -605,12 +617,14 @@
 							<th>{tt('admin.users.colUser')}</th>
 							<th>{tt('admin.users.colCreated')}</th>
 							<th>{tt('admin.users.colVia')}</th>
-							<th>{tt('admin.users.colNote')}</th>
+							<th>{tt('admin.users.colReview')}</th>
 							<th></th>
 						</tr>
 					</thead>
 					<tbody>
 						{#each filteredPending as user (user.id)}
+							{@const meta = user.registration_meta}
+							{@const s = meta?.signals}
 							<tr>
 								<td>
 									<strong>{user.display_name || user.local_part}</strong>
@@ -621,7 +635,31 @@
 									<span class="badge role">{tt('admin.users.viaOpen')}</span>
 									<small>{user.registration_ip || '—'}</small>
 								</td>
-								<td class="note-cell">{user.registration_note || tt('admin.users.noteNone')}</td>
+								<td class="review-cell">
+									{#if meta}
+										<span
+											class="badge verdict"
+											class:allow={meta.verdict === 'allow'}
+											class:review={meta.verdict === 'review'}
+											class:block={meta.verdict === 'block'}
+											>{meta.verdict}</span
+										>
+										<p class="review-reason">{meta.reason}</p>
+										{#if meta.errorDetail}
+											<p class="review-error">{tt('admin.users.reviewErrorPrefix')} {meta.errorDetail}</p>
+										{/if}
+										{#if s}
+											<p class="review-signals">
+												{#if s.country}{s.country}{s.region ? `, ${s.region}` : ''}{s.city ? ` (${s.city})` : ''} ·{/if}
+												{#if s.asOrganization}{s.asOrganization}{s.asn ? ` (AS${s.asn})` : ''} ·{/if}
+												{tt('admin.users.reviewIpReuse', { count: s.ipRegistrationsLast7d ?? 0 })}
+											</p>
+										{/if}
+									{:else}
+										<span class="muted">{tt('admin.users.reviewUnavailable')}</span>
+									{/if}
+									<p class="note-cell">{user.registration_note || tt('admin.users.noteNone')}</p>
+								</td>
 								<td>
 									<div class="row-actions">
 										<button
@@ -741,9 +779,19 @@
 							bind:value={quotaMessages}
 						/></label
 					>
+					<label
+						>Daily send quota (external emails via Resend, 0 = unlimited)<input
+							type="number"
+							min="0"
+							step="1"
+							bind:value={dailySendQuota}
+						/></label
+					>
 					<p class="help">
 						Storage quota must be 0 (unlimited) or at least 100 MB; message quota tops out at
-						50,000.
+						50,000. Daily send quota only counts messages actually sent through Resend — mail
+						delivered locally between accounts on this server doesn't count. Used today: {selected.daily_send_used ??
+							0}{selected.daily_send_quota ? ` / ${selected.daily_send_quota}` : ' (unlimited)'}.
 					</p>
 					<button class="btn btn-primary" disabled={busy === selected.id} onclick={saveQuota}
 						>Save quota</button
@@ -1122,6 +1170,47 @@
 		max-width: 320px;
 		white-space: normal;
 		color: var(--text-secondary);
+	}
+	.review-cell {
+		max-width: 380px;
+		white-space: normal;
+	}
+	.review-cell .note-cell {
+		max-width: none;
+		margin: var(--space-2) 0 0;
+		padding-top: var(--space-2);
+		border-top: 1px solid var(--border);
+	}
+	.review-reason {
+		margin: var(--space-1) 0 0;
+		font-size: 12px;
+		color: var(--text-secondary);
+		line-height: 1.5;
+	}
+	.review-error {
+		margin: var(--space-1) 0 0;
+		font-size: 11px;
+		color: var(--color-danger-bright);
+		line-height: 1.5;
+		font-family: var(--font-mono);
+	}
+	.review-signals {
+		margin: var(--space-1) 0 0;
+		font-size: 11px;
+		color: var(--text-muted);
+		font-family: var(--font-mono);
+	}
+	.badge.verdict.allow {
+		background: var(--color-success-bg);
+		color: var(--color-success);
+	}
+	.badge.verdict.review {
+		background: var(--color-warning-bg);
+		color: var(--color-warning-fg);
+	}
+	.badge.verdict.block {
+		background: var(--color-danger-bg);
+		color: var(--color-danger-bright);
 	}
 	.row-actions {
 		display: flex;

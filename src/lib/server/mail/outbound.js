@@ -3,7 +3,7 @@
 // _worker.js by the Vite plugin if needed.
 
 import { bumpFolderOnReceive, findAccountByEmail, findAccountById, insertAttachment, insertMessage, uuid } from '../db/queries.js';
-import { assertQuota, addStorageUsed, StorageQuotaError } from '../db/storage.js';
+import { assertQuota, addStorageUsed, StorageQuotaError, reserveDailySendSlot, DailySendQuotaError } from '../db/storage.js';
 import { getStorageForAccount } from '../storage/index.js';
 import { auditAsync } from '../audit/log.js';
 
@@ -148,7 +148,23 @@ async function sendOutboundInner(input, env) {
 	}
 
 	let result = { ok: true, status: 200, body: null };
-			if (externalRecipients.length || resendCc.length || resendBcc.length) {
+			const callsResend = externalRecipients.length || resendCc.length || resendBcc.length;
+			if (callsResend) {
+				// Only a real Resend call counts against the daily quota — a send
+				// whose recipients are entirely local accounts never touches Resend
+				// at all, so it must not consume a slot from that shared limit.
+				try {
+					await reserveDailySendSlot(env.DB, input.accountId);
+				} catch (err) {
+					if (err instanceof DailySendQuotaError) {
+						return {
+							ok: false,
+							error: `Daily send limit reached (${err.used}/${err.quota}). Try again tomorrow.`,
+							status: 429
+						};
+					}
+					throw err;
+				}
 				try {
 					result = await sendEmail(
 						{

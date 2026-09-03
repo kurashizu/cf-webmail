@@ -10,7 +10,7 @@ import {
 	updateAccountPassword
 } from '$lib/server/db/queries';
 import { hashPassword, newSalt } from '$lib/server/crypto/kdf';
-import { MAX_QUOTA_BYTES, MIN_QUOTA_BYTES, MAX_QUOTA_MESSAGES } from '$lib/server/db/storage';
+import { MAX_QUOTA_BYTES, MIN_QUOTA_BYTES, MAX_QUOTA_MESSAGES, MAX_DAILY_SEND_QUOTA } from '$lib/server/db/storage';
 import { getStorageForAccount, isStorageConfigured, STORAGE_BACKENDS } from '$lib/server/storage';
 import { auditAsync } from '$lib/server/audit/log';
 
@@ -27,11 +27,30 @@ async function adminCount(db: D1Database) {
 	return Number(row?.count || 0);
 }
 
+function parseRegistrationMeta(raw: unknown): Record<string, unknown> | null {
+	if (typeof raw !== 'string' || !raw) return null;
+	try {
+		return JSON.parse(raw);
+	} catch {
+		return null;
+	}
+}
+
+function todayDayNumber() {
+	return Math.floor(Date.now() / (24 * 60 * 60 * 1000));
+}
+
 async function serializeAccounts(env: App.Platform['env']) {
 	const accounts = await listAccounts(env.DB);
+	const today = todayDayNumber();
 	return Promise.all(
 		accounts.map(async (account: any) => ({
 			...account,
+			registration_meta: parseRegistrationMeta(account.registration_meta),
+			// daily_send_count only resets lazily on the next reserve, not
+			// proactively at midnight — a stale count from a previous day must
+			// read as 0 here rather than showing yesterday's number.
+			daily_send_used: Number(account.daily_send_day) === today ? Number(account.daily_send_count || 0) : 0,
 			disabled: (await env.SESSIONS.get(`disabled:${account.id}`)) === '1',
 			has_session: Boolean(await env.SESSIONS.get(`session:${account.id}`))
 		}))
@@ -54,6 +73,7 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 			password?: string;
 			quota_bytes?: number;
 			quota_messages?: number;
+			daily_send_quota?: number;
 			storage_backend?: string;
 		};
 	if (!body.id || !body.action) throw error(400, 'Missing user action');
@@ -71,13 +91,14 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 			break;
 		case 'enable':
 			await env.SESSIONS.delete(`disabled:${body.id}`);
-			// A rejected/pending open-registration account is "disabled" via the
-			// same KV flag as a normal admin-disable — clearing that flag here
-			// must also clear registration_status, or the account would end up
-			// fully able to sign in while still labeled 'rejected'/'pending'
-			// everywhere else in the admin UI (and re-disabling it later would
-			// incorrectly re-trip the "not pending" guard on approve/reject).
-			if (account.registration_status === 'pending' || account.registration_status === 'rejected') {
+			// A pending open-registration account is "disabled" via the same KV
+			// flag as a normal admin-disable — clearing that flag here must also
+			// clear registration_status, or the account would end up fully able
+			// to sign in while still labeled 'pending' everywhere else in the
+			// admin UI (and re-disabling it later would incorrectly re-trip the
+			// "not pending" guard on approve/reject). Rejected registrations are
+			// deleted outright, not disabled, so there's nothing to re-enable.
+			if (account.registration_status === 'pending') {
 				await setRegistrationStatus(env.DB, body.id, 'active');
 			}
 			break;
@@ -111,9 +132,13 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 					break;
 				}
 				case 'set_quota': {
-					// 0 means unlimited for either field. Anything else must fit within caps.
+					// 0 means unlimited for storage/message quotas. Anything else must
+					// fit within caps. daily_send_quota has no "unlimited" convention —
+					// it's the one guard directly protecting the shared Resend account
+					// limit, so an admin can raise it high but not turn it off entirely.
 					const qBytes = Number(body.quota_bytes);
 					const qMessages = Number(body.quota_messages);
+					const qDailySend = Number(body.daily_send_quota);
 					if (!Number.isFinite(qBytes) || qBytes < 0 || qBytes > MAX_QUOTA_BYTES) {
 						throw error(400, `Storage quota must be between 0 (unlimited) and ${MAX_QUOTA_BYTES} bytes.`);
 					}
@@ -123,17 +148,22 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 					if (!Number.isFinite(qMessages) || qMessages < 0 || qMessages > MAX_QUOTA_MESSAGES) {
 						throw error(400, `Message quota must be between 0 (unlimited) and ${MAX_QUOTA_MESSAGES}.`);
 					}
+					if (!Number.isFinite(qDailySend) || qDailySend < 0 || qDailySend > MAX_DAILY_SEND_QUOTA) {
+						throw error(400, `Daily send quota must be between 0 (unlimited) and ${MAX_DAILY_SEND_QUOTA}.`);
+					}
 					await env.DB
 						.prepare(
-							'UPDATE accounts SET quota_bytes = ?, quota_messages = ?, updated_at = ? WHERE id = ?'
+							'UPDATE accounts SET quota_bytes = ?, quota_messages = ?, daily_send_quota = ?, updated_at = ? WHERE id = ?'
 						)
-						.bind(qBytes, qMessages, Date.now(), body.id)
+						.bind(qBytes, qMessages, qDailySend, Date.now(), body.id)
 						.run();
 					auditDetail = {
 						previousQuotaBytes: Number(account.quota_bytes ?? 0),
 						quotaBytes: qBytes,
 						previousQuotaMessages: Number(account.quota_messages ?? 0),
-						quotaMessages: qMessages
+						quotaMessages: qMessages,
+						previousDailySendQuota: Number(account.daily_send_quota ?? 0),
+						dailySendQuota: qDailySend
 					};
 					break;
 				}
@@ -165,15 +195,30 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 			}
 			case 'reject_registration': {
 				if (account.registration_status !== 'pending') throw error(409, 'This account is not pending review.');
-				await setRegistrationStatus(env.DB, body.id, 'rejected');
-				// Leave the `disabled:` flag in place — rejected accounts stay
-				// locked out, same as an admin-disabled account, but distinguished
-				// in the UI via registration_status so it's clear this was a
-				// registration-review rejection rather than a later disable.
-				await env.SESSIONS.put(`disabled:${body.id}`, '1');
+				// A rejected signup never had a chance to receive mail or send
+				// anything — there's nothing worth keeping, so remove it outright
+				// rather than leaving a disabled row behind (same cleanup as the
+				// full account-delete path below: storage objects, D1 rows, KV).
+				const keys = await listAccountStorageKeys(env.DB, body.id);
+				const storage = getStorageForAccount(account, env);
+				if (storage && keys.length) {
+					for (let offset = 0; offset < keys.length; offset += 1000) {
+						await storage.delete(keys.slice(offset, offset + 1000));
+					}
+				}
+				await deleteAccountData(env.DB, body.id);
 				await env.SESSIONS.delete(`session:${body.id}`);
+				await env.SESSIONS.delete(`disabled:${body.id}`);
 				auditDetail = { registrationNote: account.registration_note || null };
-				break;
+				auditAsync(platform!.context, env.DB, {
+					accountId: admin.accountId,
+					actorEmail: admin.email,
+					event: `admin.${body.action}`,
+					targetAccountId: body.id,
+					targetEmail: account.email,
+					detail: auditDetail
+				});
+				return json({ ok: true, deleted: body.id });
 			}
 		default:
 			throw error(400, 'Invalid user action');
@@ -189,6 +234,7 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 	});
 
 	const updated: any = await findAccountById(env.DB, body.id);
+		const today = todayDayNumber();
 		return json({
 			ok: true,
 			user: updated ? {
@@ -202,6 +248,8 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 				registration_status: updated.registration_status || 'active',
 				registration_via: updated.registration_via || 'invite',
 				registration_note: updated.registration_note || null,
+				daily_send_quota: Number(updated.daily_send_quota ?? 0),
+				daily_send_used: Number(updated.daily_send_day) === today ? Number(updated.daily_send_count || 0) : 0,
 				disabled: (await env.SESSIONS.get(`disabled:${body.id}`)) === '1',
 				has_session: Boolean(await env.SESSIONS.get(`session:${body.id}`))
 			} : null
