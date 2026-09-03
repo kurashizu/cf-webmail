@@ -57,7 +57,7 @@ export async function computeSignals(db, { ip, note, cf }) {
  *   localPart: string, note: string, ip: string|null, userAgent: string|null,
  *   cf: IncomingRequestCfProperties|undefined
  * }} input
- * @returns {Promise<{ verdict: 'allow'|'review'|'block', reason: string, signals: object }>}
+ * @returns {Promise<{ verdict: 'allow'|'review'|'block', reason: string, signals: object, errorDetail?: string }>}
  */
 export async function reviewRegistration({ db, geminiApiKey, geminiModel, localPart, note, ip, userAgent, cf }) {
 	const signals = await computeSignals(db, { ip, note, cf });
@@ -72,8 +72,13 @@ export async function reviewRegistration({ db, geminiApiKey, geminiModel, localP
 		const modelVerdict = await callGemini(geminiApiKey, geminiModel || DEFAULT_GEMINI_MODEL, { localPart, note, signals, userAgent });
 		return { ...modelVerdict, signals };
 	} catch (err) {
-		console.error('[abuse-review] Gemini call failed, defaulting to review', err instanceof Error ? err.message : err);
-		return { verdict: 'review', reason: 'abuse model call failed; queued for manual review', signals };
+		// Surface the real cause into the stored verdict, not just the console —
+		// console.error only reaches a live `wrangler tail` session, which is easy
+		// to miss for a one-off registration; registration_meta is durable and
+		// visible from the admin queue and D1 directly.
+		const errorDetail = err instanceof Error ? err.message : String(err);
+		console.error('[abuse-review] Gemini call failed, defaulting to review', errorDetail);
+		return { verdict: 'review', reason: 'abuse model call failed; queued for manual review', signals, errorDetail };
 	}
 }
 
@@ -128,8 +133,12 @@ async function callGemini(apiKey, model, { localPart, note, signals, userAgent }
 			}
 		}),
 		// A hung call must not hang the registration request — the caller
-		// catches any rejection here and falls back to 'review'.
-		signal: AbortSignal.timeout(8000)
+		// catches any rejection here and falls back to 'review'. 8s proved too
+		// tight in production (every open registration from an AU-based Workers
+		// colo hit this abort and fell back), likely intercontinental latency to
+		// Google's API on top of the Workers runtime's own overhead — 20s gives
+		// real headroom while still bounding worst-case registration latency.
+		signal: AbortSignal.timeout(20000)
 	});
 
 	if (!res.ok) {

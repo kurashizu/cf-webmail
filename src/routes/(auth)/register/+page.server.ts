@@ -152,7 +152,12 @@ export const actions: Actions = {
 				userAgent,
 				cf: platform.cf
 			});
-			reviewMeta = { verdict: result.verdict, reason: result.reason, signals: result.signals };
+			reviewMeta = {
+				verdict: result.verdict,
+				reason: result.reason,
+				signals: result.signals,
+				...('errorDetail' in result ? { errorDetail: result.errorDetail } : {})
+			};
 
 			if (result.verdict === 'block') {
 				auditAsync(platform.context, platform.env.DB, {
