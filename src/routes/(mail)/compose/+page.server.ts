@@ -106,7 +106,8 @@ export const actions: Actions = {
 				html,
 				attachments
 			},
-			env
+			env,
+			platform!.context
 		);
 		if (!result.ok) {
 			return fail(result.status || 500, { error: result.error || 'Send failed' });

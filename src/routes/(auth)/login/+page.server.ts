@@ -3,13 +3,14 @@ import { fail, redirect } from '@sveltejs/kit';
 import { hashPassword, constantTimeEqual, newSalt } from '$lib/server/crypto/kdf';
 import { findAccountByEmail, findAccountById } from '$lib/server/db/queries';
 import { signSession, registerSession } from '$lib/server/auth/session';
+import { auditAsync } from '$lib/server/audit/log';
 
 export const load: PageServerLoad = async ({ url }) => {
 	return { next: url.searchParams.get('next') || '/inbox' };
 };
 
 export const actions: Actions = {
-	default: async ({ request, platform, cookies, url }) => {
+	default: async ({ request, platform, cookies, url, getClientAddress }) => {
 		if (!platform?.env?.JWT_SECRET) {
 			return fail(500, { error: 'JWT_SECRET is not configured', email: '' });
 		}
@@ -18,6 +19,15 @@ export const actions: Actions = {
 		const email = String(data.get('email') || '').trim().toLowerCase();
 		const password = String(data.get('password') || '');
 		const next = String(data.get('next') || '/inbox');
+		const ip = safeClientAddress(getClientAddress);
+
+		const auditFail = (reason: string) =>
+			auditAsync(platform!.context, platform!.env.DB, {
+				actorEmail: email || null,
+				event: 'login_failed',
+				detail: { reason },
+				ip
+			});
 
 		if (!email || !password) {
 			return fail(400, { error: 'Please enter email and password', email });
@@ -25,6 +35,7 @@ export const actions: Actions = {
 
 		const account = await findAccountByEmail(platform.env.DB, email);
 		if (!account) {
+			auditFail('no_such_account');
 			return fail(401, { error: 'Email or password incorrect', email });
 		}
 
@@ -32,14 +43,17 @@ export const actions: Actions = {
 			const saltBytes = toBytes(account.password_salt);
 			const got = await hashPassword(password, saltBytes, Number(account.password_iters || 100_000));
 			if (!constantTimeEqual(got, String(account.password_hash))) {
+				auditFail('bad_password');
 				return fail(401, { error: 'Email or password incorrect', email });
 			}
 		} catch {
+			auditFail('bad_password');
 			return fail(401, { error: 'Email or password incorrect', email });
 		}
 
 		const disabled = await platform.env.SESSIONS.get(`disabled:${account.id}`);
 		if (disabled === '1') {
+			auditFail('disabled');
 			return fail(403, { error: 'This account has been disabled. Contact the administrator.', email });
 		}
 
@@ -62,9 +76,26 @@ export const actions: Actions = {
 			return fail(500, { error: 'Account state inconsistent', email });
 		}
 
+		auditAsync(platform.context, platform.env.DB, {
+			accountId: String(account.id),
+			actorEmail: String(account.email),
+			event: 'login',
+			ip
+		});
+
 		throw redirect(303, next.startsWith('/') ? next : '/inbox');
 	}
 };
+
+/** getClientAddress() throws when no client address is resolvable (rare, but
+ * documented) — never let IP capture break the auth flow it's logging. */
+function safeClientAddress(getClientAddress: () => string): string | null {
+	try {
+		return getClientAddress();
+	} catch {
+		return null;
+	}
+}
 
 function toBytes(v: unknown) {
 	if (v instanceof Uint8Array) return v;

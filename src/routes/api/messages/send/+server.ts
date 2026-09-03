@@ -27,7 +27,8 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 			html: data.html || data.text || '',
 			replyToMessageId: data.inReplyTo
 		},
-		platform!.env
+		platform!.env,
+		platform!.context
 	);
 	if (!result.ok) {
 		throw error(result.status || 500, result.error || 'Send failed');

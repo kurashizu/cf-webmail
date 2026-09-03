@@ -11,6 +11,7 @@ import {
 import { hashPassword, newSalt } from '$lib/server/crypto/kdf';
 import { MAX_QUOTA_BYTES, MIN_QUOTA_BYTES, MAX_QUOTA_MESSAGES } from '$lib/server/db/storage';
 import { getStorageForAccount, isStorageConfigured, STORAGE_BACKENDS } from '$lib/server/storage';
+import { auditAsync } from '$lib/server/audit/log';
 
 const PASSWORD_ITERATIONS = 100_000;
 
@@ -58,6 +59,7 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 	const account: any = await findAccountById(env.DB, body.id);
 	if (!account) throw error(404, 'User not found');
 	const isSelf = body.id === admin.accountId;
+	let auditDetail: Record<string, unknown> | null = null;
 
 	switch (body.action) {
 		case 'disable':
@@ -84,6 +86,7 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 			}
 			await updateAccountByAdmin(env.DB, body.id, displayName, role);
 			if (account.role !== role) await env.SESSIONS.delete(`session:${body.id}`);
+			auditDetail = { displayName, previousRole: account.role, role };
 			break;
 		}
 		case 'reset_password': {
@@ -116,6 +119,12 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 						)
 						.bind(qBytes, qMessages, Date.now(), body.id)
 						.run();
+					auditDetail = {
+						previousQuotaBytes: Number(account.quota_bytes ?? 0),
+						quotaBytes: qBytes,
+						previousQuotaMessages: Number(account.quota_messages ?? 0),
+						quotaMessages: qMessages
+					};
 					break;
 				}
 				case 'set_storage_backend': {
@@ -134,11 +143,21 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 						.prepare('UPDATE accounts SET storage_backend = ?, updated_at = ? WHERE id = ?')
 						.bind(backend, Date.now(), body.id)
 						.run();
+					auditDetail = { previousBackend: account.storage_backend || 'r2', backend };
 					break;
 				}
 		default:
 			throw error(400, 'Invalid user action');
 	}
+
+	auditAsync(platform!.context, env.DB, {
+		accountId: admin.accountId,
+		actorEmail: admin.email,
+		event: `admin.${body.action}`,
+		targetAccountId: body.id,
+		targetEmail: account.email,
+		detail: auditDetail
+	});
 
 	const updated: any = await findAccountById(env.DB, body.id);
 		return json({
@@ -178,5 +197,14 @@ export const DELETE: RequestHandler = async ({ locals, platform, request }) => {
 	await deleteAccountData(env.DB, body.id);
 	await env.SESSIONS.delete(`session:${body.id}`);
 	await env.SESSIONS.delete(`disabled:${body.id}`);
+
+	auditAsync(platform!.context, env.DB, {
+		accountId: admin.accountId,
+		actorEmail: admin.email,
+		event: 'admin.delete_user',
+		targetAccountId: body.id,
+		targetEmail: account.email
+	});
+
 	return json({ ok: true, deleted: body.id });
 };

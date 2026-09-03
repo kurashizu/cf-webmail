@@ -5,10 +5,37 @@
 import { bumpFolderOnReceive, findAccountByEmail, findAccountById, insertAttachment, insertMessage, uuid } from '../db/queries.js';
 import { assertQuota, addStorageUsed, StorageQuotaError } from '../db/storage.js';
 import { getStorageForAccount } from '../storage/index.js';
+import { auditAsync } from '../audit/log.js';
 
 const DEFAULT_DOMAIN = 'krsz.in';
 
-export async function sendOutbound(input, env) {
+/**
+ * @param {*} input
+ * @param {*} env
+ * @param {ExecutionContext} [ctx] optional — audit logging is skipped (not
+ *   failed) when absent, since some callers (tests, future scripts) may not
+ *   have a Workers ExecutionContext to hand.
+ */
+export async function sendOutbound(input, env, ctx) {
+	const result = await sendOutboundInner(input, env);
+	if (env.DB) {
+		auditAsync(ctx, env.DB, {
+			accountId: input.accountId,
+			event: 'send_outbound',
+			detail: {
+				ok: result.ok,
+				to: normaliseList(input.to),
+				cc: normaliseList(input.cc),
+				bcc: normaliseList(input.bcc),
+				attachmentCount: Array.isArray(input.attachments) ? input.attachments.length : 0,
+				...(result.ok ? {} : { error: result.error, status: result.status })
+			}
+		});
+	}
+	return result;
+}
+
+async function sendOutboundInner(input, env) {
 	try {
 		const account = await findAccountById(env.DB, input.accountId);
 		if (!account) return { ok: false, error: 'Account not found', status: 404 };
@@ -64,23 +91,71 @@ export async function sendOutbound(input, env) {
 	const bccAddrs = bcc.map((a) => ({ addr: a, name: null }));
 	const preview = (input.text || '').replace(/\s+/g, ' ').trim().slice(0, 200);
 
-	const localRecipients = [];
-	const externalRecipients = [];
-	for (const recipient of to) {
-		const localAccount = recipient.endsWith(`@${domain}`)
-			? await findAccountByEmail(env.DB, recipient)
-			: null;
-		if (localAccount) localRecipients.push({ address: recipient, account: localAccount });
-		else externalRecipients.push(recipient);
+	// Split every recipient list (to / cc / bcc) into local-account vs.
+	// external addresses: local accounts get a direct in-Worker delivery,
+	// external addresses go through Resend. Previously only `to` was split
+	// this way — cc/bcc external addresses were silently dropped (never sent
+	// via Resend) and cc/bcc local accounts got no delivery at all.
+	const splitRecipients = async (addresses) => {
+		const local = [];
+		const external = [];
+		for (const recipient of addresses) {
+			const localAccount = recipient.endsWith(`@${domain}`)
+				? await findAccountByEmail(env.DB, recipient)
+				: null;
+			if (localAccount) local.push({ address: recipient, account: localAccount });
+			else external.push(recipient);
+		}
+		return { local, external };
+	};
+	const toSplit = await splitRecipients(to);
+	const ccSplit = await splitRecipients(cc);
+	const bccSplit = await splitRecipients(bcc);
+
+	// De-dupe local recipients by account id — the same address can
+	// legitimately appear in more than one of to/cc/bcc (e.g. reply-all,
+	// copy-paste), and without this a local account would get deliverLocal()
+	// called once per occurrence, landing duplicate copies in their inbox.
+	const seenLocalAccountIds = new Set();
+	const localRecipients = [...toSplit.local, ...ccSplit.local, ...bccSplit.local].filter((r) => {
+		if (seenLocalAccountIds.has(r.account.id)) return false;
+		seenLocalAccountIds.add(r.account.id);
+		return true;
+	});
+
+	// Same de-dupe for the external side, in to > cc > bcc precedence — an
+	// address already going out via `to` (or `cc`) must not also appear in a
+	// later field's payload to Resend.
+	let externalRecipients = [...new Set(toSplit.external)];
+	const toSet = new Set(externalRecipients);
+	let resendCc = [...new Set(ccSplit.external)].filter((addr) => !toSet.has(addr));
+	const ccSet = new Set(resendCc);
+	let resendBcc = [...new Set(bccSplit.external)].filter((addr) => !toSet.has(addr) && !ccSet.has(addr));
+
+	// Resend (like raw SMTP) requires a non-empty `to`. If every `to`
+	// recipient turned out to be local (delivered in-Worker instead), but
+	// there are still external cc/bcc addresses to reach, promote the first
+	// one into `to` so the send isn't silently skipped — the MIME headers
+	// built below (buildMime) still carry the real To/Cc/Bcc the recipient's
+	// client renders, so this only changes Resend's routing, not the
+	// message content the recipient sees.
+	if (!externalRecipients.length && resendCc.length) {
+		externalRecipients = [resendCc[0]];
+		resendCc = resendCc.slice(1);
+	} else if (!externalRecipients.length && resendBcc.length) {
+		externalRecipients = [resendBcc[0]];
+		resendBcc = resendBcc.slice(1);
 	}
 
 	let result = { ok: true, status: 200, body: null };
-			if (externalRecipients.length) {
+			if (externalRecipients.length || resendCc.length || resendBcc.length) {
 				try {
 					result = await sendEmail(
 						{
 							from: fromAddress,
 							to: externalRecipients,
+							cc: resendCc,
+							bcc: resendBcc,
 							subject: input.subject,
 							text: input.text,
 							html: input.html,
@@ -312,6 +387,8 @@ export async function sendEmail(input, env) {
 	if (input.html) payload.html = input.html;
 	if (input.replyTo) payload.reply_to = input.replyTo;
 	if (input.attachments?.length) payload.attachments = input.attachments;
+	if (input.cc?.length) payload.cc = input.cc;
+	if (input.bcc?.length) payload.bcc = input.bcc;
 
 	const res = await fetch('https://api.resend.com/emails', {
 		method: 'POST',

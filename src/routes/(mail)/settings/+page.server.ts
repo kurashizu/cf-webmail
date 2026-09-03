@@ -7,6 +7,7 @@ import {
 	updateAccountProfile
 } from '$lib/server/db/queries';
 import { registerSession, signSession } from '$lib/server/auth/session';
+import { auditAsync } from '$lib/server/audit/log';
 
 const PASSWORD_ITERATIONS = 100_000;
 
@@ -36,6 +37,11 @@ export const actions: Actions = {
 		}
 
 		await updateAccountProfile(platform!.env.DB, locals.user.accountId, displayName);
+		auditAsync(platform!.context, platform!.env.DB, {
+			accountId: locals.user.accountId,
+			actorEmail: locals.user.email,
+			event: 'profile_update'
+		});
 		return { action: 'profile', success: 'Profile updated.' };
 	},
 
@@ -99,6 +105,12 @@ export const actions: Actions = {
 			secure: url.protocol === 'https:',
 			sameSite: 'lax',
 			maxAge: 60 * 60 * 24
+		});
+
+		auditAsync(platform!.context, platform!.env.DB, {
+			accountId: account.id,
+			actorEmail: account.email,
+			event: 'password_change'
 		});
 
 		return { action: 'password', success: 'Password changed successfully.' };

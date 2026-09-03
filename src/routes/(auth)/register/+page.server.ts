@@ -12,6 +12,7 @@ import {
 	uuid
 } from '$lib/server/db/queries';
 import { signSession, registerSession } from '$lib/server/auth/session';
+import { auditAsync } from '$lib/server/audit/log';
 
 export const load: PageServerLoad = async ({ platform, url }) => {
 	return {
@@ -24,7 +25,7 @@ export const load: PageServerLoad = async ({ platform, url }) => {
 const LOCAL_PART_RE = /^[a-z0-9][a-z0-9._-]{1,30}$/;
 
 export const actions: Actions = {
-	default: async ({ request, platform, cookies, url }) => {
+	default: async ({ request, platform, cookies, url, getClientAddress }) => {
 		if (!platform?.env?.JWT_SECRET) {
 			return fail(500, { error: 'JWT_SECRET is not configured', localPart: '', displayName: '', inviteCode: '' });
 		}
@@ -111,6 +112,16 @@ export const actions: Actions = {
 		});
 		await ensureFolders(platform.env.DB, id);
 				await consumeInvite(platform.env.DB, codeHash, id);
+
+				let ip: string | null = null;
+				try { ip = getClientAddress(); } catch { /* not resolvable, skip */ }
+				auditAsync(platform.context, platform.env.DB, {
+					accountId: id,
+					actorEmail: email,
+					event: 'register',
+					detail: { via: 'invite' },
+					ip
+				});
 
 				// Create the Email Routing worker rule so this address can receive mail.
 				// If this fails the account still exists; the admin can re-create the rule

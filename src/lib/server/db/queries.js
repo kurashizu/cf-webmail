@@ -688,3 +688,60 @@ export async function listInvites(db) {
 export async function deleteInvite(db, codeHash) {
 	return db.prepare('DELETE FROM invite_codes WHERE code_hash = ?').bind(codeHash).run();
 }
+
+// --- audit log --------------------------------------------------------------
+
+/**
+ * Paginated, filterable audit log listing for the admin UI.
+ * @param {D1Database} db
+ * @param {{ event?: string, accountId?: string, limit?: number, offset?: number }} [opts]
+ */
+export async function listAuditLog(db, opts = {}) {
+	const limit = Math.min(Math.max(Number(opts.limit) || 50, 1), 200);
+	const offset = Math.max(Number(opts.offset) || 0, 0);
+	const conditions = [];
+	const values = [];
+	if (opts.event) {
+		conditions.push('event = ?');
+		values.push(opts.event);
+	}
+	if (opts.accountId) {
+		conditions.push('(account_id = ? OR target_account_id = ?)');
+		values.push(opts.accountId, opts.accountId);
+	}
+	const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+	const result = await db
+		.prepare(
+			`SELECT * FROM audit_log ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`
+		)
+		.bind(...values, limit, offset)
+		.all();
+	return result.results || [];
+}
+
+export async function countAuditLog(db, opts = {}) {
+	const conditions = [];
+	const values = [];
+	if (opts.event) {
+		conditions.push('event = ?');
+		values.push(opts.event);
+	}
+	if (opts.accountId) {
+		conditions.push('(account_id = ? OR target_account_id = ?)');
+		values.push(opts.accountId, opts.accountId);
+	}
+	const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+	const row = await db
+		.prepare(`SELECT COUNT(*) AS c FROM audit_log ${where}`)
+		.bind(...values)
+		.first();
+	return Number(row?.c || 0);
+}
+
+/** Distinct event names currently present, for the admin filter dropdown. */
+export async function listAuditEventTypes(db) {
+	const result = await db
+		.prepare('SELECT DISTINCT event FROM audit_log ORDER BY event ASC')
+		.all();
+	return (result.results || []).map((row) => row.event);
+}

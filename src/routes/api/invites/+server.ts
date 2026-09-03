@@ -1,6 +1,7 @@
 import type { RequestHandler } from './$types';
 import { error, json } from '@sveltejs/kit';
 import { deleteInvite, findAccountByLocalPart, listInvites } from '$lib/server/db/queries';
+import { auditAsync } from '$lib/server/audit/log';
 
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
 const LOCAL_PART_RE = /^[a-z0-9][a-z0-9._-]{1,30}$/;
@@ -62,6 +63,15 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 		.bind(codeHash, localPart || null, admin.accountId, now, expiresAt, notes || null)
 		.run();
 
+	// Never log the raw code — code_hash is enough to correlate with the
+	// invite_codes row, and the plaintext code is a one-time secret.
+	auditAsync(platform!.context, env.DB, {
+		accountId: admin.accountId,
+		actorEmail: admin.email,
+		event: 'admin.create_invite',
+		detail: { codeHash, localPart: localPart || null, expiresAt }
+	});
+
 	return json({ ok: true, code, code_hash: codeHash, local_part: localPart || null, expires_at: expiresAt });
 };
 
@@ -72,7 +82,7 @@ export const GET: RequestHandler = async ({ locals, platform }) => {
 };
 
 export const DELETE: RequestHandler = async ({ locals, platform, request }) => {
-	requireAdmin(locals);
+	const admin = requireAdmin(locals);
 	const body = (await request.json().catch(() => ({}))) as { code_hash?: string };
 	if (!body.code_hash || !/^[a-f0-9]{64}$/.test(body.code_hash)) throw error(400, 'Invalid invite');
 
@@ -83,5 +93,13 @@ export const DELETE: RequestHandler = async ({ locals, platform, request }) => {
 	if (invite.consumed_at) throw error(409, 'Used invitations are retained as account history and cannot be deleted.');
 
 	await deleteInvite(platform!.env.DB, body.code_hash);
+
+	auditAsync(platform!.context, platform!.env.DB, {
+		accountId: admin.accountId,
+		actorEmail: admin.email,
+		event: 'admin.delete_invite',
+		detail: { codeHash: body.code_hash }
+	});
+
 	return json({ ok: true, deleted: body.code_hash });
 };

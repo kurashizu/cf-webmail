@@ -7,6 +7,7 @@
 	import Toast from '$lib/components/Toast.svelte';
 	import LanguagePicker from '$lib/components/LanguagePicker.svelte';
 	import BackgroundVideo from '$lib/components/BackgroundVideo.svelte';
+	import BuildInfo from '$lib/components/BuildInfo.svelte';
 	import { registerMailShortcuts } from '$lib/shortcuts';
 	import { t, type Locale } from '$lib/i18n';
 
@@ -245,6 +246,7 @@
 						<span>{tt('common.signOut')}</span>
 					</button>
 				</form>
+				<BuildInfo />
 			</div>
 		</aside>
 
@@ -611,6 +613,11 @@
 		color: var(--text-muted);
 		padding: var(--space-2) var(--space-3);
 		border-radius: var(--radius-md);
+	}
+
+	.sidebar-footer :global(.build-info) {
+		margin-top: var(--space-2);
+		padding: var(--space-2) var(--space-3);
 	}
 
 	.footer-link:hover {

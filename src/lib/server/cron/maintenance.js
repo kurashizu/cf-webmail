@@ -10,6 +10,7 @@ import {
 import { reconcileStorageUsed } from '../db/storage.js';
 
 export const TRASH_RETENTION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+export const AUDIT_RETENTION_MS = 90 * 24 * 60 * 60 * 1000; // 90 days
 const R2_DELETE_BATCH_SIZE = 1000;
 
 export async function runMaintenance(env, ctx) {
@@ -20,6 +21,7 @@ export async function runMaintenance(env, ctx) {
 		trashEmptied: 0,
 		accountsReconciled: 0,
 		storageWrites: 0,
+		auditLogPurged: 0,
 		durationMs: 0
 	};
 
@@ -45,6 +47,14 @@ export async function runMaintenance(env, ctx) {
 				console.warn('[cron] reconcile failed for account', account.id, err);
 			}
 		}
+
+		// --- 3. Audit log retention -----------------------------------------
+		const auditCutoff = Date.now() - AUDIT_RETENTION_MS;
+		const auditDeleted = await env.DB
+			.prepare('DELETE FROM audit_log WHERE created_at < ?')
+			.bind(auditCutoff)
+			.run();
+		result.auditLogPurged = Number(auditDeleted.meta?.changes || 0);
 	} catch (err) {
 		console.error('[cron] maintenance failed', err);
 	}

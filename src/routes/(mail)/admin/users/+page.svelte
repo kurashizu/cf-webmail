@@ -302,7 +302,10 @@
 			<h1>{tt('admin.users.title')}</h1>
 			<p class="subtitle">{tt('admin.users.subtitle')}</p>
 		</div>
-		<a class="btn btn-ghost" href="/settings">{tt('common.back')}</a>
+		<div class="head-actions">
+			<a class="btn btn-ghost" href="/admin/audit">Audit log</a>
+			<a class="btn btn-ghost" href="/settings">{tt('common.back')}</a>
+		</div>
 	</header>
 
 	<div class="stats">
@@ -828,6 +831,11 @@
 		align-items: end;
 		gap: 16px;
 		margin-bottom: 20px;
+	}
+
+	.head-actions {
+		display: flex;
+		gap: var(--space-2);
 	}
 
 	.stats {
