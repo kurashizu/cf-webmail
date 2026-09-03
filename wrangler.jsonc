@@ -56,7 +56,7 @@
 		"TURNSTILE_SITE_KEY": "0x4AAAAAAD2Ilp9c8uP6HIzj",
 		// Which Gemini model reviews open-registration signups. Change this and
 		// redeploy to swap models — no code edit needed.
-		"GEMINI_MODEL": "gemini-3.5-flash"
+		"GEMINI_MODEL": "gemma-4-26b-a4b-it"
 	},
 
 	"observability": {
