@@ -116,9 +116,10 @@
 						type="text"
 						name="local_part"
 						placeholder={tt('auth.localPartPlaceholder')}
-						value={form?.localPart ?? ''}
+						value={form?.localPart ?? data.reservedLocalPart ?? ''}
 						required
 						autocomplete="off"
+						readonly={mode === 'invite' && !!data.reservedLocalPart && !form?.localPart}
 						pattern={mode === 'open' ? '[a-z0-9][a-z0-9._-]{4,30}' : '[a-z0-9][a-z0-9._-]{1,30}'}
 						title={mode === 'open' ? tt('auth.localPartMinOpen') : undefined}
 					/>

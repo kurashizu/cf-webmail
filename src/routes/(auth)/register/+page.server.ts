@@ -17,6 +17,14 @@ import { verifyTurnstile } from '$lib/server/auth/turnstile';
 import { reviewRegistration } from '$lib/server/auth/abuse-review';
 
 export const load: PageServerLoad = async ({ platform, url }) => {
+	const inviteCode = url.searchParams.get('invite') || '';
+	let reservedLocalPart = '';
+	if (inviteCode && platform?.env?.DB) {
+		const invite = await findInviteByHash(platform.env.DB, await sha256Hex(inviteCode));
+		if (invite && !invite.consumed_at && (!invite.expires_at || invite.expires_at >= Date.now())) {
+			reservedLocalPart = invite.local_part || '';
+		}
+	}
 	return {
 		domain: platform?.env?.MAIL_DOMAIN || 'krsz.in',
 		hasInvites: true,
@@ -25,7 +33,8 @@ export const load: PageServerLoad = async ({ platform, url }) => {
 		// treat its presence as the feature flag.
 		openRegistration: Boolean(platform?.env?.TURNSTILE_SITE_KEY),
 		turnstileSiteKey: platform?.env?.TURNSTILE_SITE_KEY || '',
-		inviteCode: url.searchParams.get('invite') || ''
+		inviteCode,
+		reservedLocalPart
 	};
 };
 
