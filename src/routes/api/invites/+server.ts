@@ -4,7 +4,7 @@ import { deleteInvite, findAccountByLocalPart, listInvites } from '$lib/server/d
 import { auditAsync } from '$lib/server/audit/log';
 
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
-const LOCAL_PART_RE = /^[a-z0-9][a-z0-9._-]{1,30}$/;
+const LOCAL_PART_RE = /^[a-z0-9][a-z0-9._-]{0,30}$/;
 const MAX_EXPIRY_HOURS = 24 * 365;
 
 function genCode(len = 20) {
@@ -42,7 +42,7 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 		: Number(data.expires_in_hours);
 
 	if (localPart && !LOCAL_PART_RE.test(localPart)) {
-		throw error(400, 'Address must be 2–31 characters using lowercase letters, numbers, dots, underscores, or dashes.');
+		throw error(400, 'Address must be 1–31 characters using lowercase letters, numbers, dots, underscores, or dashes.');
 	}
 	if (localPart && await findAccountByLocalPart(env.DB, localPart)) {
 		throw error(409, `The address ${localPart}@${env.MAIL_DOMAIN || 'krsz.in'} already exists.`);
