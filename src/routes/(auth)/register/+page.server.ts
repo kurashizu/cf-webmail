@@ -70,33 +70,6 @@ export const actions: Actions = {
 				inviteCode
 			});
 		}
-		if (!LOCAL_PART_RE.test(localPart)) {
-			return fail(400, {
-				error: 'Local part must be 2-31 chars, lowercase letters, digits, dot, underscore, or dash',
-				localPart,
-				displayName,
-				inviteCode
-			});
-		}
-		// Open registration only: a longer minimum makes cheap enumeration/land-grab
-		// signups (single letters, two-char combos) less attractive. Invite-issued
-		// addresses can still be short — an admin already chose to hand one out.
-		if (openMode && localPart.length < OPEN_LOCAL_PART_MIN_LENGTH) {
-			return fail(400, {
-				error: `Local part must be at least ${OPEN_LOCAL_PART_MIN_LENGTH} characters for public registration`,
-				localPart,
-				displayName,
-				inviteCode
-			});
-		}
-		if (password.length < 6) {
-			return fail(400, {
-				error: 'Password must be at least 6 characters',
-				localPart,
-				displayName,
-				inviteCode
-			});
-		}
 
 		let invite: Awaited<ReturnType<typeof findInviteByHash>> | null = null;
 		let codeHash = '';
@@ -136,6 +109,41 @@ export const actions: Actions = {
 					inviteCode
 				});
 			}
+		}
+
+		// An invite that reserves a specific local part was already vetted by an
+		// admin when they created it — the format/length rules below exist to
+		// keep self-chosen addresses sane, so they don't apply here.
+		const isReservedByInvite = Boolean(invite?.local_part && invite.local_part.toLowerCase() === localPart);
+
+		if (!isReservedByInvite) {
+			if (!LOCAL_PART_RE.test(localPart)) {
+				return fail(400, {
+					error: 'Local part must be 2-31 chars, lowercase letters, digits, dot, underscore, or dash',
+					localPart,
+					displayName,
+					inviteCode
+				});
+			}
+			// Open registration only: a longer minimum makes cheap enumeration/land-grab
+			// signups (single letters, two-char combos) less attractive. Invite-issued
+			// addresses can still be short — an admin already chose to hand one out.
+			if (openMode && localPart.length < OPEN_LOCAL_PART_MIN_LENGTH) {
+				return fail(400, {
+					error: `Local part must be at least ${OPEN_LOCAL_PART_MIN_LENGTH} characters for public registration`,
+					localPart,
+					displayName,
+					inviteCode
+				});
+			}
+		}
+		if (password.length < 6) {
+			return fail(400, {
+				error: 'Password must be at least 6 characters',
+				localPart,
+				displayName,
+				inviteCode
+			});
 		}
 
 		const email = `${localPart}@${domain}`;
