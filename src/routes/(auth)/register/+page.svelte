@@ -12,7 +12,9 @@
 	// data.openRegistration is fixed for the lifetime of this page (it comes
 	// from a server-only env flag, not something that changes client-side),
 	// so capturing it once into local toggle state is intentional.
-	let mode = $state<'invite' | 'open'>(untrack(() => (data.openRegistration ? 'open' : 'invite')));
+	let mode = $state<'invite' | 'open'>(
+		untrack(() => (data.inviteCode || !data.openRegistration ? 'invite' : 'open'))
+	);
 	let submitting = $state(false);
 
 	// Turnstile is rendered explicitly (not via its auto-detect scan) so it
